@@ -2,14 +2,14 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useMemo, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { useChatThreads } from '@/hooks/useChatThreads';
 
 const MOCK_BALANCE = 100;
 
-export default function ChatPage() {
+function ChatPageInner() {
   const searchParams = useSearchParams();
   const threadParam = searchParams.get('thread');
   const matchParam = searchParams.get('match');
@@ -162,5 +162,13 @@ export default function ChatPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function ChatPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-pinder-dark text-white flex items-center justify-center">Loading chats...</div>}>
+      <ChatPageInner />
+    </Suspense>
   );
 }
