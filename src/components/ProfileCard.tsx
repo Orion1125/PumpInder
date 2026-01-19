@@ -4,14 +4,19 @@ import Image from 'next/image';
 import { UserProfile } from '@/types';
 import { useSwipe } from '@/hooks/useSwipe';
 import { BriefcaseIcon, CloseIcon, HeartIcon, LocationIcon } from './Icons';
+import { ReactionsPanel } from './ReactionsPanel';
+import { ReactionType } from '@/types/reactions';
 
 interface ProfileCardProps {
   profile: UserProfile;
   onLike: (profileId: number) => void;
   onPass: (profileId: number) => void;
-  onSuperlike: (profileId: number) => void;
+  onReaction: (profileId: number, type: ReactionType) => void;
+  balance: number;
   isProcessing: boolean;
   animation: 'left' | 'right' | 'up' | null;
+  showReactions: boolean;
+  onToggleReactions: () => void;
 }
 
 const SwipeFeedback = ({ direction, opacity }: { direction: 'left' | 'right' | 'up'; opacity: number }) => {
@@ -36,11 +41,21 @@ const SwipeFeedback = ({ direction, opacity }: { direction: 'left' | 'right' | '
   );
 };
 
-export function ProfileCard({ profile, onLike, onPass, onSuperlike, isProcessing, animation }: ProfileCardProps) {
+export function ProfileCard({ 
+  profile, 
+  onLike, 
+  onPass, 
+  onReaction, 
+  balance,
+  isProcessing, 
+  animation, 
+  showReactions, 
+  onToggleReactions 
+}: ProfileCardProps) {
   const { swipeHandlers, getTransformStyle, swipeDirection, swipeOpacity, isDragging } = useSwipe({
     onSwipeLeft: () => onPass(profile.id),
     onSwipeRight: () => onLike(profile.id),
-    onSwipeUp: () => onSuperlike(profile.id),
+    onSwipeUp: () => onToggleReactions(),
     isProcessing,
     threshold: 120,
   });
@@ -119,7 +134,22 @@ export function ProfileCard({ profile, onLike, onPass, onSuperlike, isProcessing
               <HeartIcon className="w-10 h-10 text-white" />
             )}
           </button>
+          <button
+            onClick={onToggleReactions}
+            disabled={isProcessing}
+            className="w-20 h-20 bg-linear-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center backdrop-blur-lg border border-purple-500/60 hover:from-purple-600 hover:to-pink-600 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-110"
+          >
+            <span className="text-2xl">⚡</span>
+          </button>
         </div>
+
+        {showReactions && (
+          <ReactionsPanel
+            onReaction={(type) => onReaction(profile.id, type)}
+            balance={balance}
+            disabled={isProcessing}
+          />
+        )}
       </div>
     </div>
   );

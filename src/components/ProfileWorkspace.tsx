@@ -38,6 +38,7 @@ interface ProfileWorkspaceProps {
   successRedirect?: string;
   backHref?: string;
   backLabel?: string;
+  onSubmit?: () => boolean | void;
 }
 
 export function ProfileWorkspace({
@@ -49,6 +50,7 @@ export function ProfileWorkspace({
   successRedirect = '/swipe',
   backHref,
   backLabel = 'Back',
+  onSubmit,
 }: ProfileWorkspaceProps) {
   const router = useRouter();
 
@@ -91,6 +93,14 @@ export function ProfileWorkspace({
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
+
+    // Call onSubmit if provided and check if it returns false to prevent submission
+    if (onSubmit) {
+      const result = onSubmit();
+      if (result === false) {
+        return; // Prevent form submission
+      }
+    }
 
     if (!form.name.trim() || !form.bio.trim()) {
       setError('Name and bio are required.');

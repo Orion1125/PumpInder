@@ -6,6 +6,7 @@ import { MatchNotification } from '@/components/MatchNotification';
 import { ProfileCard } from '@/components/ProfileCard';
 import { useProfiles } from '@/hooks/useProfiles';
 import { UserProfile } from '@/types';
+import { ReactionType, REACTION_CONFIGS } from '@/types/reactions';
 
 export default function SwipePage() {
   const { profiles } = useProfiles();
@@ -15,6 +16,7 @@ export default function SwipePage() {
   const [animation, setAnimation] = useState<'left' | 'right' | 'up' | null>(null);
   const [isMatchModalOpen, setIsMatchModalOpen] = useState(false);
   const [matchedProfile, setMatchedProfile] = useState<UserProfile | null>(null);
+  const [showReactions, setShowReactions] = useState(false);
 
   const advanceToNextProfile = useCallback(() => {
     setTimeout(() => {
@@ -48,23 +50,28 @@ export default function SwipePage() {
     }, 1200);
   }, [currentProfileIndex, isProcessingLike, pinderBalance, profiles, advanceToNextProfile]);
 
-  const handleSuperlike = useCallback(() => {
-    if (isProcessingLike || pinderBalance < 5) return;
+  const handleReaction = useCallback((profileId: number, type: ReactionType) => {
+    if (isProcessingLike || pinderBalance < REACTION_CONFIGS[type].cost) return;
 
     setIsProcessingLike(true);
     setAnimation('up');
 
     setTimeout(() => {
       const likedProfile = profiles[currentProfileIndex];
-      setPinderBalance((prev) => prev - 5);
+      setPinderBalance((prev) => prev - REACTION_CONFIGS[type].cost);
 
       if (likedProfile.likesYou) {
         setMatchedProfile(likedProfile);
         setIsMatchModalOpen(true);
       }
+      setShowReactions(false);
       advanceToNextProfile();
     }, 1200);
   }, [currentProfileIndex, isProcessingLike, pinderBalance, profiles, advanceToNextProfile]);
+
+  const toggleReactions = useCallback(() => {
+    setShowReactions((prev) => !prev);
+  }, []);
 
   const closeMatchModal = useCallback(() => {
     setIsMatchModalOpen(false);
@@ -89,9 +96,12 @@ export default function SwipePage() {
                   profile={currentProfile}
                   onLike={handleLike}
                   onPass={handlePass}
-                  onSuperlike={handleSuperlike}
+                  onReaction={handleReaction}
+                  balance={pinderBalance}
                   isProcessing={isProcessingLike}
                   animation={animation}
+                  showReactions={showReactions}
+                  onToggleReactions={toggleReactions}
                 />
               ) : (
                 <div className="flex h-full w-full flex-col items-center justify-center rounded-[28px] border border-white/10 bg-pinder-dark/70 text-center animate-fade-in">
