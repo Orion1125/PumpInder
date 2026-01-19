@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Keypair, PublicKey } from '@solana/web3.js';
+import { useState } from 'react';
+import { Keypair } from '@solana/web3.js';
 import { mnemonicToSeedSync, generateMnemonic } from 'bip39';
 import { derivePath } from 'ed25519-hd-key';
-import { nacl } from 'tweetnacl';
 
 interface WalletInfo {
   publicKey: string;
