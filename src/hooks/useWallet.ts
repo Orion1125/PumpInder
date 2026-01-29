@@ -5,7 +5,7 @@ import { Keypair } from '@solana/web3.js';
 import { mnemonicToSeedSync } from 'bip39';
 import { derivePath } from 'ed25519-hd-key';
 
-interface WalletInfo {
+export interface WalletInfo {
   publicKey: string;
   secretPhrase: string;
 }
@@ -35,7 +35,7 @@ export function useWallet() {
     const seed = mnemonicToSeedSync(mnemonic);
     const derivationPath = "m/44'/501'/0'/0'";
     const derivedKey = derivePath(derivationPath, seed.toString('hex')).key;
-    const keypair = Keypair.fromSecretKey(derivedKey);
+    const keypair = Keypair.fromSeed(derivedKey);
     
     return {
       publicKey: keypair.publicKey.toBase58(),
@@ -60,7 +60,7 @@ export function useWallet() {
       const seed = mnemonicToSeedSync(wallet.secretPhrase);
       const derivationPath = "m/44'/501'/0'/0'";
       const derivedKey = derivePath(derivationPath, seed.toString('hex')).key;
-      return Keypair.fromSecretKey(derivedKey);
+      return Keypair.fromSeed(derivedKey);
     } catch (error) {
       console.error('Error deriving keypair:', error);
       return null;
