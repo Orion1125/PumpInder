@@ -5,6 +5,6 @@ import { ReactPlugin } from "@21st-extension/react";
 
 export function Toolbar() {
   return (
-    <TwentyFirstToolbar config={{ plugins: [ReactPlugin] }} suppressHydrationWarning />
+    <TwentyFirstToolbar config={{ plugins: [ReactPlugin] }} />
   );
 }
