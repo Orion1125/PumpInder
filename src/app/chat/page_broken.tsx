@@ -16,9 +16,7 @@ import { Search, Send, Coins, Check, Clock, TrendingUp, TrendingDown, Moon } fro
 import { useChatThreads } from '@/hooks/useChatThreads';
 import { AppHeader } from '@/components/AppHeader';
 import { useFeePaymentModal } from '@/components/FeePaymentModal';
-import type { ChatThread } from '@/types';
-
-const MOCK_BALANCE = 100;
+import type { ChatThread, ChatMessage } from '@/types';
 
 const ACTION_BUTTONS = [
   {
@@ -37,9 +35,6 @@ const formatTimestamp = (timestamp: string) => {
 };
 
 const gasEstimate = (id: number) => `~${(0.001 + id * 0.00042).toFixed(3)} SOL`;
-
-const isThreadOnline = (thread: ChatThread) =>
-  thread.lastActive.toLowerCase().includes('m') || thread.lastActive.toLowerCase().includes('now');
 
 const getLastMessageStatus = (thread: ChatThread) => {
   const lastMessage = thread.messages[thread.messages.length - 1];
@@ -61,7 +56,7 @@ function ChatPageInner() {
     initialMatchId: Number.isNaN(initialMatchId) ? undefined : initialMatchId,
   });
 
-  const { Modal, initiatePayment } = useFeePaymentModal();
+  const { Modal, initiatePayment, lastPayment, resetLastPayment } = useFeePaymentModal();
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -83,45 +78,41 @@ function ChatPageInner() {
   );
 
   const filteredThreads = useMemo(
-    () =>
-      sortedThreads.filter((thread) =>
-        thread.matchName.toLowerCase().includes(searchTerm.toLowerCase()),
-      ),
+    () => sortedThreads.filter((thread) => thread.matchName.toLowerCase().includes(searchTerm.toLowerCase())),
     [sortedThreads, searchTerm],
   );
 
-  const pinnedSignal = sortedThreads[0];
+  const pinnedSignal = threads.find((thread) => thread.id === 1);
 
   const playClickSound = useCallback(() => {
-    if (typeof window === 'undefined') return;
-    const AudioCtx = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!AudioCtx) return;
-    const ctx = audioCtxRef.current ?? new AudioCtx();
-    audioCtxRef.current = ctx;
-    const oscillator = ctx.createOscillator();
-    const gainNode = ctx.createGain();
-    oscillator.type = 'square';
-    oscillator.frequency.value = 320;
-    gainNode.gain.value = 0.08;
+    if (!audioCtxRef.current) {
+      audioCtxRef.current = new (window.AudioContext || (window as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext)();
+    }
+    const audioContext = audioCtxRef.current;
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
     oscillator.connect(gainNode);
-    gainNode.connect(ctx.destination);
-    oscillator.start();
-    oscillator.stop(ctx.currentTime + 0.12);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.frequency.value = 800;
+    oscillator.type = 'square';
+    
+    gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.1);
   }, []);
 
   useEffect(() => {
-    return () => {
-      audioCtxRef.current?.close();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!activeThreadId) return;
-    const timeout = setTimeout(() => {
-      setIsPeerTyping(true);
-      setTimeout(() => setIsPeerTyping(false), 3600);
-    }, 0);
-    return () => clearTimeout(timeout);
+    if (activeThreadId) {
+      const timeout = setTimeout(() => {
+        setIsPeerTyping(true);
+        setTimeout(() => setIsPeerTyping(false), 3600);
+      }, 0);
+      return () => clearTimeout(timeout);
+    }
   }, [activeThreadId]);
 
   useEffect(() => {
@@ -145,6 +136,18 @@ function ChatPageInner() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isTipDropdownOpen]);
+
+  // Effect to handle payment results
+  useEffect(() => {
+    if (lastPayment) {
+      if (lastPayment.success && selectedTip) {
+        // TODO: Send tip notification to chat
+        console.log(`Tip of ${selectedTip} sent successfully`);
+      }
+      // Reset the payment result after handling
+      resetLastPayment();
+    }
+  }, [lastPayment, selectedTip, resetLastPayment]);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -177,17 +180,12 @@ function ChatPageInner() {
     }
     
     // Initiate payment for tip
-    await initiatePayment(feeType, (result) => {
-      if (result.success) {
-        // TODO: Send tip notification to chat
-        console.log(`Tip of ${amount} sent successfully`);
-      }
-    });
+    await initiatePayment(feeType);
   };
 
   return (
     <div className="min-h-screen bg-(--bg-canvas) text-[#121212]">
-      <AppHeader activePage="chat" balanceDisplay={MOCK_BALANCE.toFixed(2)} />
+      <AppHeader activePage="chat" />
 
       <main className="main-content mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 px-4 pb-12 pt-28 lg:px-8">
         <div className="flex flex-col gap-3 text-xs uppercase tracking-[0.35em] text-[#555] sm:flex-row sm:items-center sm:justify-between">
@@ -389,7 +387,7 @@ function ChatPageInner() {
 
                   {activeThread ? (
                     <>
-                      {activeThread.messages.map((msg) => {
+                      {activeThread.messages.map((msg: ChatMessage) => {
                         const isYou = msg.sender === 'you';
                         const getStatusIcon = () => {
                           if (!isYou || !msg.status) return null;
@@ -477,10 +475,11 @@ function ChatPageInner() {
               </form>
             </section>
           </div>
+          
           {/* Fee Payment Modal */}
           <Modal />
-        </main>
-      </div>
+        </div>
+      </main>
     </div>
   );
 }

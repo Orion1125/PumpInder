@@ -6,14 +6,14 @@ type ActivePage = 'swipe' | 'chat';
 
 interface SwipeHeaderProps {
   activePage: ActivePage;
-  balanceDisplay: string;
+  balance: number;
 }
 
-export function SwipeHeader({ activePage, balanceDisplay }: SwipeHeaderProps) {
+export function SwipeHeader({ activePage, balance }: SwipeHeaderProps) {
   return (
     <AppHeader
       activePage={activePage}
-      balanceDisplay={balanceDisplay}
+      balance={balance}
       logoType="pumpinder"
       showBalance={true}
       showProfile={true}
