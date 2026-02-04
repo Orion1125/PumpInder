@@ -1,9 +1,35 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Create a mock client for build time when env vars are not available
+function createMockClient() {
+  return {
+    rpc: () => ({ data: null, error: null }),
+    from: () => ({
+      select: () => ({ data: null, error: null }),
+      insert: () => ({ data: null, error: null }),
+      update: () => ({ data: null, error: null }),
+      delete: () => ({ data: null, error: null }),
+    }),
+  } as unknown as SupabaseClient;
+}
+
+// Create the actual Supabase client
+function createSupabaseClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.warn('Supabase environment variables not configured, using mock client');
+    return createMockClient();
+  }
+  
+  return createClient(supabaseUrl, supabaseAnonKey);
+}
+
+// Export the Supabase client
+export const supabase = createSupabaseClient();
 
 // Types for our database tables
 export interface Database {
