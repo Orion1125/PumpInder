@@ -863,6 +863,13 @@ body::after {
   gap: 1rem;
 }
 
+.wallet-modal__actions .btn-block:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
 .wallet-modal__security {
   margin-top: 1.5rem;
   padding: 1.25rem;
@@ -1188,10 +1195,104 @@ body::after {
 
 .recovery-error {
   margin-top: 1rem;
-  padding: 0.75rem;
+  padding: 1rem;
   border: 2px solid #ef4444;
   border-radius: 12px;
   background: #fef2f2;
+}
+
+.login-method-option {
+  transition: all 0.2s ease;
+}
+
+.login-method-option button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.social-error-container {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.social-error-icon {
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+.social-error-content {
+  flex: 1;
+}
+
+.social-error-title {
+  font-weight: 500;
+  color: #b91c1c;
+  font-size: 0.875rem;
+}
+
+.social-error-message {
+  color: #dc2626;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+.social-error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.social-error-button {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 0.375rem;
+  border: 1px solid;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.social-error-button:hover {
+  transform: translateY(-1px);
+}
+
+.social-error-button.retry {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #b91c1c;
+}
+
+.social-error-button.retry:hover {
+  background: #fecaca;
+}
+
+.social-error-button.skip {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+  color: #4b5563;
+}
+
+.social-error-button.skip:hover {
+  background: #e5e7eb;
+}
+
+.social-error-button.alternative {
+  background: #dbeafe;
+  border-color: #93c5fd;
+  color: #1d4ed8;
+}
+
+.social-error-button.alternative:hover {
+  background: #bfdbfe;
 }
 
 .photo-slot {

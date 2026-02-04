@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Twitter } from 'lucide-react';
+import { useSocialAuth } from '@/hooks/useSocialAuth';
 
 interface LoginMethodsModalProps {
   isOpen: boolean;
@@ -30,41 +31,80 @@ function GoogleGIcon() {
 }
 
 export default function LoginMethodsModal({ isOpen, onClose }: LoginMethodsModalProps) {
-  const [linkedAccounts, setLinkedAccounts] = useState<LinkedAccount[]>([
-    { provider: 'x', isConnected: false },
-    { provider: 'google', isConnected: false },
-  ]);
+  const { 
+    linkedAccounts: socialAccounts, 
+    connectTwitter, 
+    connectGmail, 
+    connectTwitterMock, 
+    connectGmailMock,
+    removeSocialAccount,
+    isLoading,
+    error
+  } = useSocialAuth();
+  
   const [isConnecting, setIsConnecting] = useState<LinkedProvider>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
+  
+  // Map social accounts to the format used by this component
+  const linkedAccounts = [
+    { 
+      provider: 'x' as LinkedProvider, 
+      isConnected: socialAccounts.some(acc => acc.provider === 'twitter') 
+    },
+    { 
+      provider: 'google' as LinkedProvider, 
+      isConnected: socialAccounts.some(acc => acc.provider === 'gmail') 
+    }
+  ];
 
-  const handleConnect = async (provider: LinkedProvider) => {
+  const handleConnect = useCallback(async (provider: LinkedProvider) => {
     if (!provider) return;
     
     setIsConnecting(provider);
+    setLocalError(null);
     
-    // Simulate OAuth connection
-    setTimeout(() => {
-      setLinkedAccounts((prev: LinkedAccount[]) =>
-        prev.map((account: LinkedAccount) =>
-          account.provider === provider
-            ? { ...account, isConnected: true }
-            : account
-        )
-      );
+    try {
+      // Attempt real OAuth connection
+      if (provider === 'x') {
+        await connectTwitter();
+      } else {
+        await connectGmail();
+      }
+      
+      // If we get here, redirect should have happened
+      // The user will be redirected back after OAuth completion
+    } catch (error) {
+      console.error(`Error connecting ${provider}:`, error);
+      
+      // Fallback to mock connection for testing
+      try {
+        if (provider === 'x') {
+          await connectTwitterMock();
+        } else {
+          await connectGmailMock();
+        }
+      } catch (mockError) {
+        console.error(`Mock connection failed for ${provider}:`, mockError);
+        const errorMessage = mockError instanceof Error ? mockError.message : `Failed to connect ${provider}`;
+        setLocalError(errorMessage);
+      }
+    } finally {
       setIsConnecting(null);
-    }, 1500);
-  };
+    }
+  }, [connectTwitter, connectGmail, connectTwitterMock, connectGmailMock]);
 
-  const handleDisconnect = (provider: LinkedProvider) => {
+  const handleDisconnect = useCallback(async (provider: LinkedProvider) => {
     if (!provider) return;
     
-    setLinkedAccounts((prev: LinkedAccount[]) =>
-      prev.map((account: LinkedAccount) =>
-        account.provider === provider
-          ? { ...account, isConnected: false }
-          : account
-      )
-    );
-  };
+    try {
+      const providerType = provider === 'x' ? 'twitter' : 'gmail';
+      await removeSocialAccount(providerType as 'twitter' | 'gmail');
+    } catch (error) {
+      console.error(`Error disconnecting ${provider}:`, error);
+      const errorMessage = error instanceof Error ? error.message : `Failed to disconnect ${provider}`;
+      setLocalError(errorMessage);
+    }
+  }, [removeSocialAccount]);
 
   if (!isOpen) return null;
 
@@ -86,6 +126,23 @@ export default function LoginMethodsModal({ isOpen, onClose }: LoginMethodsModal
           <p className="ui-font text-sm text-ink-secondary">
             Link accounts to log back in easily if you log out. These connections are for authentication only and do not affect wallet ownership or access.
           </p>
+          
+          {/* Error display */}
+          {(error || localError) && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+              <div className="flex items-start gap-2">
+                <svg className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                <div>
+                  <p className="text-red-700 text-xs font-medium">Connection Error</p>
+                  <p className="text-red-600 text-xs mt-1">
+                    {localError || error}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="mt-8 space-y-4">

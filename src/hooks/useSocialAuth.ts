@@ -41,7 +41,9 @@ export function useSocialAuth() {
   // Connect Twitter account with real OAuth
   const connectTwitter = async () => {
     if (!isConnected || !wallet) {
-      throw new Error('Wallet not connected');
+      const error = new Error('Wallet not connected');
+      setError('Wallet connection required to link social accounts');
+      throw error;
     }
 
     setIsLoading(true);
@@ -57,7 +59,9 @@ export function useSocialAuth() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to initiate Twitter connection');
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || 'Failed to initiate Twitter connection';
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
@@ -73,8 +77,9 @@ export function useSocialAuth() {
       return data;
     } catch (err) {
       console.error('Error connecting Twitter:', err);
-      setError(err instanceof Error ? err.message : 'Failed to connect Twitter');
-      throw err;
+      const userFriendlyError = getSocialAuthErrorMessage(err, 'Twitter');
+      setError(userFriendlyError);
+      throw new Error(userFriendlyError);
     } finally {
       setIsLoading(false);
     }
@@ -83,7 +88,9 @@ export function useSocialAuth() {
   // Connect Gmail account with real OAuth
   const connectGmail = async () => {
     if (!isConnected || !wallet) {
-      throw new Error('Wallet not connected');
+      const error = new Error('Wallet not connected');
+      setError('Wallet connection required to link social accounts');
+      throw error;
     }
 
     setIsLoading(true);
@@ -99,7 +106,9 @@ export function useSocialAuth() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to initiate Gmail connection');
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || 'Failed to initiate Gmail connection';
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
@@ -115,17 +124,40 @@ export function useSocialAuth() {
       return data;
     } catch (err) {
       console.error('Error connecting Gmail:', err);
-      setError(err instanceof Error ? err.message : 'Failed to connect Gmail');
-      throw err;
+      const userFriendlyError = getSocialAuthErrorMessage(err, 'Gmail');
+      setError(userFriendlyError);
+      throw new Error(userFriendlyError);
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Helper function to generate user-friendly error messages
+  const getSocialAuthErrorMessage = (error: unknown, provider: string): string => {
+    if (error instanceof Error) {
+      if (error.message.includes('not configured')) {
+        return `${provider} OAuth is not properly configured. Please contact support or try again later.`;
+      }
+      if (error.message.includes('wallet')) {
+        return 'Wallet connection required. Please connect your wallet first.';
+      }
+      if (error.message.includes('network') || error.message.includes('fetch')) {
+        return `Network error connecting to ${provider}. Please check your internet connection and try again.`;
+      }
+      if (error.message.includes('redirect') || error.message.includes('URI')) {
+        return `${provider} redirect failed. Please ensure the app is properly configured.`;
+      }
+      return error.message;
+    }
+    return `Unable to connect ${provider}. Please try again later.`;
+  };
+
   // Mock connection for testing (fallback)
   const connectTwitterMock = async () => {
     if (!isConnected || !wallet) {
-      throw new Error('Wallet not connected');
+      const error = new Error('Wallet not connected');
+      setError('Wallet connection required to link social accounts');
+      throw error;
     }
 
     setIsLoading(true);
@@ -141,7 +173,9 @@ export function useSocialAuth() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to connect Twitter');
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || 'Failed to connect Twitter';
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
@@ -149,8 +183,9 @@ export function useSocialAuth() {
       return data;
     } catch (err) {
       console.error('Error connecting Twitter (mock):', err);
-      setError(err instanceof Error ? err.message : 'Failed to connect Twitter');
-      throw err;
+      const userFriendlyError = getSocialAuthErrorMessage(err, 'Twitter');
+      setError(userFriendlyError);
+      throw new Error(userFriendlyError);
     } finally {
       setIsLoading(false);
     }
@@ -158,7 +193,9 @@ export function useSocialAuth() {
 
   const connectGmailMock = async () => {
     if (!isConnected || !wallet) {
-      throw new Error('Wallet not connected');
+      const error = new Error('Wallet not connected');
+      setError('Wallet connection required to link social accounts');
+      throw error;
     }
 
     setIsLoading(true);
@@ -174,7 +211,9 @@ export function useSocialAuth() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to connect Gmail');
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || 'Failed to connect Gmail';
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
@@ -182,8 +221,9 @@ export function useSocialAuth() {
       return data;
     } catch (err) {
       console.error('Error connecting Gmail (mock):', err);
-      setError(err instanceof Error ? err.message : 'Failed to connect Gmail');
-      throw err;
+      const userFriendlyError = getSocialAuthErrorMessage(err, 'Gmail');
+      setError(userFriendlyError);
+      throw new Error(userFriendlyError);
     } finally {
       setIsLoading(false);
     }

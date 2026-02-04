@@ -127,6 +127,7 @@ export default function OnboardingPage() {
   const [hasStoredBackup, setHasStoredBackup] = useState(false);
   const [isConnectingSocial, setIsConnectingSocial] = useState<'x' | 'google' | null>(null);
   const [socialConnectionError, setSocialConnectionError] = useState<string | null>(null);
+  const [showRetryOptions, setShowRetryOptions] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -305,6 +306,7 @@ export default function OnboardingPage() {
     async (provider: RecoveryProvider) => {
       setIsConnectingSocial(provider);
       setSocialConnectionError(null);
+      setShowRetryOptions(false);
       
       try {
         // Check if we have a wallet connected first
@@ -326,7 +328,9 @@ export default function OnboardingPage() {
         // The user will be redirected back after OAuth completion
       } catch (error) {
         console.error(`Error connecting ${provider}:`, error);
-        setSocialConnectionError(`Failed to connect ${provider}. Please try again.`);
+        const errorMessage = error instanceof Error ? error.message : `Failed to connect ${provider}`;
+        setSocialConnectionError(errorMessage);
+        setShowRetryOptions(true);
         
         // Fallback to mock connection for testing
         try {
@@ -337,9 +341,12 @@ export default function OnboardingPage() {
           }
           // On successful mock connection, proceed to wallet creation
           handleRecoveryComplete(provider);
+          setShowRetryOptions(false);
         } catch (mockError) {
           console.error(`Mock connection failed for ${provider}:`, mockError);
-          setSocialConnectionError(`Unable to connect ${provider}. Please try again later.`);
+          const mockErrorMessage = mockError instanceof Error ? mockError.message : `Unable to connect ${provider}`;
+          setSocialConnectionError(mockErrorMessage);
+          setShowRetryOptions(true);
         }
       } finally {
         setIsConnectingSocial(null);
@@ -665,7 +672,55 @@ export default function OnboardingPage() {
 
             {socialConnectionError && (
               <div className="recovery-error">
-                <p className="text-red-500 text-sm">{socialConnectionError}</p>
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 mt-0.5">
+                    <svg className="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-red-700 text-sm font-medium">Connection Failed</p>
+                    <p className="text-red-600 text-sm mt-1">{socialConnectionError}</p>
+                    
+                    {showRetryOptions && (
+                      <div className="mt-3 flex flex-col sm:flex-row gap-2">
+                        <button
+                          type="button"
+                          className="px-3 py-2 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-medium rounded-md border border-red-300 transition-colors"
+                          onClick={() => {
+                            const provider = isConnectingSocial || 'x'; // Default to 'x' if no current connection
+                            if (provider) {
+                              handleRecoveryLink(provider as RecoveryProvider);
+                            }
+                          }}
+                        >
+                          Try Again
+                        </button>
+                        <button
+                          type="button"
+                          className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium rounded-md border border-gray-300 transition-colors"
+                          onClick={() => {
+                            setSocialConnectionError(null);
+                            setShowRetryOptions(false);
+                            handleRecoveryComplete('skip');
+                          }}
+                        >
+                          Skip for Now
+                        </button>
+                        <button
+                          type="button"
+                          className="px-3 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs font-medium rounded-md border border-blue-300 transition-colors"
+                          onClick={() => {
+                            const alternativeProvider = isConnectingSocial === 'x' ? 'google' : 'x';
+                            handleRecoveryLink(alternativeProvider as RecoveryProvider);
+                          }}
+                        >
+                          Try {isConnectingSocial === 'x' ? 'Google' : 'X'} Instead
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
