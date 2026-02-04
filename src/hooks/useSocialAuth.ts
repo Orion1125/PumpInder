@@ -4,8 +4,18 @@ import { useState, useEffect, useCallback } from 'react';
 import { useWallet } from './useWallet';
 import type { SocialAccount } from '@/types/social';
 
-export function useSocialAuth() {
-  const { wallet, isConnected } = useWallet();
+interface UseSocialAuthOptions {
+  walletOverride?: string;
+  isConnectedOverride?: boolean;
+}
+
+export function useSocialAuth(options?: UseSocialAuthOptions) {
+  const { wallet: walletFromHook, isConnected: isConnectedFromHook } = useWallet();
+  
+  // Use provided wallet or fall back to wallet from hook
+  const wallet = options?.walletOverride ?? walletFromHook;
+  const isConnected = options?.walletOverride ? true : isConnectedFromHook;
+  
   const [linkedAccounts, setLinkedAccounts] = useState<SocialAccount[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,11 +50,15 @@ export function useSocialAuth() {
 
   // Connect Twitter account with real OAuth
   const connectTwitter = async () => {
-    if (!isConnected || !wallet) {
-      const error = new Error('Wallet not connected');
-      setError('Wallet connection required to link social accounts');
+    if (!wallet) {
+      const error = new Error('Wallet required for Twitter connection');
+      setError('Wallet is required to link Twitter account');
       throw error;
     }
+    
+    // Set loading state even if not technically connected
+    setIsLoading(true);
+    setError(null);
 
     setIsLoading(true);
     setError(null);
@@ -87,11 +101,15 @@ export function useSocialAuth() {
 
   // Connect Gmail account with real OAuth
   const connectGmail = async () => {
-    if (!isConnected || !wallet) {
-      const error = new Error('Wallet not connected');
-      setError('Wallet connection required to link social accounts');
+    if (!wallet) {
+      const error = new Error('Wallet required for Gmail connection');
+      setError('Wallet is required to link Gmail account');
       throw error;
     }
+    
+    // Set loading state even if not technically connected
+    setIsLoading(true);
+    setError(null);
 
     setIsLoading(true);
     setError(null);
@@ -154,11 +172,15 @@ export function useSocialAuth() {
 
   // Mock connection for testing (fallback)
   const connectTwitterMock = async () => {
-    if (!isConnected || !wallet) {
-      const error = new Error('Wallet not connected');
-      setError('Wallet connection required to link social accounts');
+    if (!wallet) {
+      const error = new Error('Wallet required for Twitter connection');
+      setError('Wallet is required to link Twitter account');
       throw error;
     }
+    
+    // Set loading state even if not technically connected
+    setIsLoading(true);
+    setError(null);
 
     setIsLoading(true);
     setError(null);
@@ -192,11 +214,15 @@ export function useSocialAuth() {
   };
 
   const connectGmailMock = async () => {
-    if (!isConnected || !wallet) {
-      const error = new Error('Wallet not connected');
-      setError('Wallet connection required to link social accounts');
+    if (!wallet) {
+      const error = new Error('Wallet required for Gmail connection');
+      setError('Wallet is required to link Gmail account');
       throw error;
     }
+    
+    // Set loading state even if not technically connected
+    setIsLoading(true);
+    setError(null);
 
     setIsLoading(true);
     setError(null);
