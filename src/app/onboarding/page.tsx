@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { generateMnemonic } from 'bip39';
 import { useWallet, type WalletInfo } from '@/hooks/useWallet';
+import { useSocialAuth } from '@/hooks/useSocialAuth';
 import { encryptPhrase, storePhraseBackup, hasPhraseBackup } from '@/utils/phraseVault';
 import { TrendingUp, Palette, Gamepad2, BarChart3, Smile, Wrench, Music, CameraIcon, Book, Heart, Coffee, Pizza, Plane, TreePine, Dumbbell, Film, PenTool, Globe, Zap, Moon, Sun, Cloud, Star, Flower, Cat, Dog, Bird, Fish, Twitter } from 'lucide-react';
 
@@ -112,6 +113,7 @@ const defaultState: OnboardingState = {
 export default function OnboardingPage() {
   const router = useRouter();
   const { createWallet, saveWallet } = useWallet();
+  const { connectTwitter, connectGmail, connectTwitterMock, connectGmailMock } = useSocialAuth();
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [form, setForm] = useState<OnboardingState>(defaultState);
   const [showWalletModal, setShowWalletModal] = useState(false);
@@ -123,12 +125,35 @@ export default function OnboardingPage() {
   const [backupError, setBackupError] = useState('');
   const [backupStatus, setBackupStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [hasStoredBackup, setHasStoredBackup] = useState(false);
+  const [isConnectingSocial, setIsConnectingSocial] = useState<'x' | 'google' | null>(null);
+  const [socialConnectionError, setSocialConnectionError] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const storedHandle = localStorage.getItem(HANDLE_STORAGE_KEY);
     const storedPayload = localStorage.getItem(ONBOARDING_STORAGE_KEY);
+
+    // Check for social connection success from URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const socialConnectSuccess = urlParams.get('social_connect');
+    const provider = urlParams.get('provider') as RecoveryProvider;
+    
+    if (socialConnectSuccess === 'success' && provider) {
+      // Social connection was successful, proceed to wallet creation
+      setForm((prev) => {
+        const updated: OnboardingState = {
+          ...prev,
+          recoveryMethod: provider,
+        };
+        persistForm(updated);
+        return updated;
+      });
+      setShowWalletModal(true);
+      
+      // Clean up URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
 
     const timeoutId = setTimeout(() => {
       if (storedPayload) {
@@ -277,11 +302,50 @@ export default function OnboardingPage() {
   );
 
   const handleRecoveryLink = useCallback(
-    (provider: RecoveryProvider) => {
-      console.info(`Starting ${provider.toUpperCase()} OAuth flow (placeholder).`);
-      handleRecoveryComplete(provider);
+    async (provider: RecoveryProvider) => {
+      setIsConnectingSocial(provider);
+      setSocialConnectionError(null);
+      
+      try {
+        // Check if we have a wallet connected first
+        if (!walletInfo) {
+          // Generate a temporary wallet for social linking
+          const mnemonic = generateMnemonic();
+          const tempWallet = createWallet(mnemonic);
+          setWalletInfo(tempWallet);
+        }
+        
+        // Attempt real OAuth connection
+        if (provider === 'x') {
+          await connectTwitter();
+        } else {
+          await connectGmail();
+        }
+        
+        // If we get here, the OAuth redirect should have happened
+        // The user will be redirected back after OAuth completion
+      } catch (error) {
+        console.error(`Error connecting ${provider}:`, error);
+        setSocialConnectionError(`Failed to connect ${provider}. Please try again.`);
+        
+        // Fallback to mock connection for testing
+        try {
+          if (provider === 'x') {
+            await connectTwitterMock();
+          } else {
+            await connectGmailMock();
+          }
+          // On successful mock connection, proceed to wallet creation
+          handleRecoveryComplete(provider);
+        } catch (mockError) {
+          console.error(`Mock connection failed for ${provider}:`, mockError);
+          setSocialConnectionError(`Unable to connect ${provider}. Please try again later.`);
+        }
+      } finally {
+        setIsConnectingSocial(null);
+      }
     },
-    [handleRecoveryComplete]
+    [walletInfo, createWallet, connectTwitter, connectGmail, connectTwitterMock, connectGmailMock, handleRecoveryComplete]
   );
 
   const updateField = (field: StepId, value: string) => {
@@ -580,6 +644,7 @@ export default function OnboardingPage() {
                   key={option.id}
                   className="recovery-option"
                   onClick={() => handleRecoveryLink(option.id)}
+                  disabled={isConnectingSocial !== null}
                 >
                   <span
                     className={`recovery-option__icon recovery-option__icon--${option.id}`}
@@ -591,10 +656,18 @@ export default function OnboardingPage() {
                     <span className="recovery-option__label">{option.label}</span>
                     <span className="recovery-option__caption">{option.description}</span>
                   </span>
-                  <span className="recovery-option__cta">Link</span>
+                  <span className="recovery-option__cta">
+                    {isConnectingSocial === option.id ? 'Connecting...' : 'Link'}
+                  </span>
                 </button>
               ))}
             </div>
+
+            {socialConnectionError && (
+              <div className="recovery-error">
+                <p className="text-red-500 text-sm">{socialConnectionError}</p>
+              </div>
+            )}
 
             <div className="recovery-note">
               <p>Optional, but recommended.</p>
