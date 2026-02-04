@@ -1,20 +1,18 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { decryptPhrase, loadPhraseBackup, clearPhraseBackup, type PhraseBackupPayload } from '@/utils/phraseVault';
+import { AppHeader } from '@/components/AppHeader';
 
 export default function SecuritySettingsPage() {
-  const [backup, setBackup] = useState<PhraseBackupPayload | null>(null);
+  const [backup, setBackup] = useState<PhraseBackupPayload | null>(() => loadPhraseBackup());
   const [password, setPassword] = useState('');
   const [status, setStatus] = useState<'idle' | 'decrypting' | 'success' | 'error'>('idle');
   const [error, setError] = useState('');
   const [recoveredPhrase, setRecoveredPhrase] = useState<string | null>(null);
   const [hasCopied, setHasCopied] = useState(false);
 
-  useEffect(() => {
-    setBackup(loadPhraseBackup());
-  }, []);
 
   const formattedSavedAt = useMemo(() => {
     if (!backup) return '';
@@ -75,25 +73,19 @@ export default function SecuritySettingsPage() {
   const isDecryptDisabled = !backup || password.length < 8 || status === 'decrypting';
 
   return (
-    <div className="min-h-screen bg-canvas px-4 py-16">
-      <header className="max-w-3xl mx-auto mb-8 flex items-center justify-between">
-        <Link href="/" className="display-font text-2xl tracking-[0.2em]">
-          PUMPINDER™
-        </Link>
-        <Link href="/swipe" className="ui-font text-xs underline uppercase">
-          Back to app
-        </Link>
-      </header>
-
-      <main className="max-w-3xl mx-auto">
-        <div className="onboarding-card" style={{ width: '100%', maxWidth: '100%' }}>
-          <div className="space-y-3">
-            <p className="ui-font text-sm text-ink-secondary">// WALLET SECURITY CONTROL ROOM</p>
-            <h1 className="display-font text-4xl tracking-[0.3em]">RECOVERY VAULT</h1>
-            <p className="ui-font text-sm text-ink-secondary">
-              Everything happens locally in your browser — we never transmit your recovery phrase or password.
-            </p>
-          </div>
+    <div className="min-h-screen bg-canvas text-[#121212]">
+      <AppHeader logoType="back" showBalance={false} showProfile={false} showNav={false} />
+      
+      <div className="settings-shell">
+        <main className="max-w-3xl mx-auto">
+          <div className="onboarding-card" style={{ width: '100%', maxWidth: '100%' }}>
+            <div className="space-y-3">
+              <p className="ui-font text-sm text-ink-secondary">{/* WALLET SECURITY CONTROL ROOM */}</p>
+              <h1 className="display-font text-4xl tracking-[0.3em]">RECOVERY VAULT</h1>
+              <p className="ui-font text-sm text-ink-secondary">
+                Everything happens locally in your browser — we never transmit your recovery phrase or password.
+              </p>
+            </div>
 
           {backup ? (
             <div className="mt-8 space-y-6">
@@ -165,6 +157,7 @@ export default function SecuritySettingsPage() {
           </div>
         </div>
       </main>
+    </div>
     </div>
   );
 }

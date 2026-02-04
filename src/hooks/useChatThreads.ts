@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { ChatMessage, ChatThread } from '@/types';
+import { useMemo, useState } from 'react';
+import { ChatMessage, ChatThread, MessageStatus } from '@/types';
 
 const mockThreads: ChatThread[] = [
   {
@@ -15,12 +15,14 @@ const mockThreads: ChatThread[] = [
         sender: 'match',
         content: 'Totally down for that sunrise mission you mentioned.',
         timestamp: '2024-05-01T09:30:00Z',
+        status: 'read',
       },
       {
         id: 2,
         sender: 'you',
-        content: 'Let’s lock a weekend. I’ll bring the pour-over kit ☕️',
+        content: "Let's lock a weekend. I'll bring the pour-over kit ",
         timestamp: '2024-05-01T09:34:00Z',
+        status: 'read',
       },
     ],
   },
@@ -37,18 +39,21 @@ const mockThreads: ChatThread[] = [
         sender: 'match',
         content: 'Ran tokenomics for that memecoin you sent. Chaotic good energy 😂',
         timestamp: '2024-04-30T18:12:00Z',
+        status: 'read',
       },
       {
         id: 2,
         sender: 'you',
         content: 'Need your alpha on my next pitch deck?',
         timestamp: '2024-04-30T18:20:00Z',
+        status: 'read',
       },
       {
         id: 3,
         sender: 'match',
         content: 'Only if dinner is included.',
         timestamp: '2024-04-30T18:22:00Z',
+        status: 'read',
       },
     ],
   },
@@ -65,6 +70,7 @@ const mockThreads: ChatThread[] = [
         sender: 'match',
         content: 'Leaving Tokyo for Lisbon next month. Any rooftop bars we should hit?',
         timestamp: '2024-04-29T15:45:00Z',
+        status: 'read',
       },
     ],
   },
@@ -95,10 +101,6 @@ export function useChatThreads(options: UseChatThreadsOptions = {}) {
 
   const [activeThreadId, setActiveThreadId] = useState<number>(resolvedInitialThreadId);
 
-  useEffect(() => {
-    setActiveThreadId((prev) => (prev === resolvedInitialThreadId ? prev : resolvedInitialThreadId));
-  }, [resolvedInitialThreadId]);
-
   const activeThread = useMemo(() => threads.find((thread) => thread.id === activeThreadId) || null, [threads, activeThreadId]);
 
   const selectThread = (threadId: number) => {
@@ -124,6 +126,7 @@ export function useChatThreads(options: UseChatThreadsOptions = {}) {
       sender: 'you',
       content,
       timestamp: new Date().toISOString(),
+      status: 'sending',
     };
 
     setThreads((prev) =>
@@ -137,6 +140,38 @@ export function useChatThreads(options: UseChatThreadsOptions = {}) {
           : thread,
       ),
     );
+
+    // Simulate message being sent after a short delay
+    setTimeout(() => {
+      setThreads((prev) =>
+        prev.map((thread) =>
+          thread.id === activeThread.id
+            ? {
+                ...thread,
+                messages: thread.messages.map((msg) =>
+                  msg.id === newMessage.id ? { ...msg, status: 'sent' as MessageStatus } : msg
+                ),
+              }
+            : thread,
+        ),
+      );
+
+      // Simulate message being read after another delay
+      setTimeout(() => {
+        setThreads((prev) =>
+          prev.map((thread) =>
+            thread.id === activeThread.id
+              ? {
+                  ...thread,
+                  messages: thread.messages.map((msg) =>
+                    msg.id === newMessage.id ? { ...msg, status: 'read' as MessageStatus } : msg
+                  ),
+                }
+              : thread,
+          ),
+        );
+      }, 2000);
+    }, 500);
   };
 
   return {

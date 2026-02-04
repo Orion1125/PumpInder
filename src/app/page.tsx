@@ -59,7 +59,7 @@ export default function Home() {
       {/* Main Content */}
       <div className="main-content min-h-screen flex flex-col" suppressHydrationWarning>
         {/* Header Navigation */}
-        <header className="absolute top-0 left-0 right-0 z-40 p-8">
+        <header className="absolute top-0 left-0 right-0 z-40 p-4 md:p-8">
           <div className="flex justify-between items-center">
             {/* Logo */}
             <div className="bg-white border-2 border-black px-4 py-2">
@@ -68,7 +68,7 @@ export default function Home() {
             
             {/* Navigation Links */}
             <nav className="flex gap-8">
-              {['TOKENOMICS', 'BASED INTERACTIONS', 'LEARN MORE'].map((link) => (
+              {['LEARN MORE'].map((link) => (
                 <a
                   key={link}
                   href="#"
@@ -82,7 +82,7 @@ export default function Home() {
         </header>
 
         {/* Hero Section */}
-        <main className="flex-1 flex items-center justify-center px-8 pt-24 pb-32">
+        <main className="flex-1 flex items-center justify-center px-4 pt-16 pb-20 md:px-8 md:pt-24 md:pb-32">
           <div className="w-full max-w-4xl flex flex-col items-center text-center space-y-8">
             <div className="space-y-6">
               <h1 className="display-font h1 text-black">
@@ -95,7 +95,7 @@ export default function Home() {
               </p>
             </div>
             
-            <div className="flex gap-4 items-center">
+            <div className="flex flex-col sm:flex-row gap-4 items-center">
               <button
                 onClick={startExperience}
                 disabled={isPending}

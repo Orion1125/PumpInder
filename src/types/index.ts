@@ -10,11 +10,14 @@ export interface UserProfile {
   occupation: string;
 }
 
+export type MessageStatus = 'sending' | 'sent' | 'read';
+
 export interface ChatMessage {
   id: number;
   sender: 'you' | 'match';
   content: string;
   timestamp: string;
+  status?: MessageStatus;
 }
 
 export interface ChatThread {

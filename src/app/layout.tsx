@@ -22,6 +22,7 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "PumpInder",
   description: "Pumpfun-style Tinder experience powered by PINDER tokens.",
+  viewport: "width=device-width, initial-scale=1",
 };
 
 export default function RootLayout({
@@ -30,7 +31,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html>
       <body className={`${clashDisplay.variable} ${jetbrainsMono.variable} antialiased`}>
         <AppProviders>
           {children}

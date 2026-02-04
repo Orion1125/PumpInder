@@ -2,37 +2,41 @@
 
 import Image from 'next/image';
 import { useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import {
   AlertCircle,
-  Check,
   ChevronDown,
-  Edit,
   Flame,
   Heart,
-  Maximize,
   MessageCircle,
   Rocket,
-  Settings,
-  ToggleRight,
   TrendingUp,
-  User,
   X,
 } from 'lucide-react';
 
+import { AppHeader } from '@/components/AppHeader';
 import { useSwipe } from '@/hooks/useSwipe';
+
+const ONBOARDING_STORAGE_KEY = 'pinder_onboarding_payload';
+const PROFILE_STORAGE_KEY = 'pinder_profile_extended';
+const HANDLE_STORAGE_KEY = 'pinder_handle';
 
 type Profile = {
   id: number;
   name: string;
+  handle?: string;
   age: number;
   role: string;
   bio: string;
+  about?: string;
   wallet: string;
   level: number;
   walletBadge: string;
   tokens: string[];
   image: string;
+  interests?: string[];
+  location?: string;
+  gender?: string;
+  pronouns?: string;
 };
 
 type CardAnimation = 'left' | 'right' | 'up' | null;
@@ -54,11 +58,16 @@ const profileDeck: Profile[] = [
     age: 28,
     role: 'Solidity Dev // DJ',
     bio: '"Looking for a co-founder for a DeFi rug... jk"',
+    about: '"Looking for a co-founder for a DeFi rug... jk"',
     wallet: '0x...4a2b',
     level: 5,
     walletBadge: 'WHALE',
     tokens: ['$SWIF', '$BONK', '$SOL'],
     image: 'https://picsum.photos/seed/jax/720/720',
+    interests: ['defi', 'gaming', 'music'],
+    location: 'Berlin, Germany',
+    gender: 'MALE',
+    pronouns: 'HE / HIM',
   },
   {
     id: 2,
@@ -66,11 +75,16 @@ const profileDeck: Profile[] = [
     age: 26,
     role: 'AI Prompt Shaman',
     bio: 'Shipping decks in public. Will audit vibes for snacks.',
+    about: 'Shipping decks in public. Will audit vibes for snacks.',
     wallet: '0x...91ff',
     level: 7,
     walletBadge: 'ALPHA',
     tokens: ['$PUMP', '$JUP', '$HNT'],
     image: 'https://picsum.photos/seed/mina/720/720',
+    interests: ['nfts', 'art', 'photography'],
+    location: 'San Francisco, CA',
+    gender: 'FEMALE',
+    pronouns: 'SHE / HER',
   },
   {
     id: 3,
@@ -78,11 +92,16 @@ const profileDeck: Profile[] = [
     age: 32,
     role: 'On-chain Sleuth',
     bio: 'I bookmark token bonding curves for fun.',
+    about: 'I bookmark token bonding curves for fun.',
     wallet: '0x...be12',
     level: 4,
     walletBadge: 'SCANNER',
     tokens: ['$PYTH', '$TIA', '$WIF'],
     image: 'https://picsum.photos/seed/theo/720/720',
+    interests: ['trading', 'reading', 'fitness'],
+    location: 'London, UK',
+    gender: 'MALE',
+    pronouns: 'HE / HIM',
   },
   {
     id: 4,
@@ -90,15 +109,32 @@ const profileDeck: Profile[] = [
     age: 24,
     role: 'Pump.fun Top 10%',
     bio: 'Pixel artist by day, memecoin whisperer by night.',
+    about: 'Pixel artist by day, memecoin whisperer by night.',
     wallet: '0x...af88',
     level: 9,
     walletBadge: 'DEGEN',
     tokens: ['$CAT', '$BODEN', '$FIDA'],
     image: 'https://picsum.photos/seed/aria/720/720',
+    interests: ['memes', 'art', 'music'],
+    location: 'New York, NY',
+    gender: 'FEMALE',
+    pronouns: 'SHE / THEY',
   },
 ];
 
-const walletAgeOptions = ['LAST 7 DAYS', 'LAST 30 DAYS', 'LAST 90 DAYS', 'ALL TIME'];
+type SwipeFilters = {
+  token: string;
+  interests: string[];
+  location: string;
+  gender: string;
+};
+
+const createDefaultFilters = (): SwipeFilters => ({
+  token: 'ANY',
+  interests: [],
+  location: 'ANY',
+  gender: 'ANY',
+});
 
 const notificationSeed: NotificationItem[] = [
   { id: 1, content: '@0x...bb MATCHED!', status: 'new', icon: 'flame', accent: '#00D668' },
@@ -116,31 +152,109 @@ const iconMap = {
   trend: TrendingUp,
 };
 
+const loadUserProfile = (): Profile | null => {
+  if (typeof window === 'undefined') return null;
+  
+  try {
+    const storedProfile = localStorage.getItem(PROFILE_STORAGE_KEY);
+    const onboardingData = localStorage.getItem(ONBOARDING_STORAGE_KEY);
+    const storedHandle = localStorage.getItem(HANDLE_STORAGE_KEY);
+    
+    if (storedProfile) {
+      const parsed = JSON.parse(storedProfile);
+      let age = 25;
+      
+      if (onboardingData) {
+        const onboarding = JSON.parse(onboardingData);
+        if (onboarding.birthday) {
+          const birthYear = new Date(onboarding.birthday).getFullYear();
+          const currentYear = new Date().getFullYear();
+          age = currentYear - birthYear;
+        }
+      }
+      
+      return {
+        id: 999,
+        name: parsed.name || 'Anonymous',
+        handle: storedHandle || parsed.name || 'ANON',
+        age: age,
+        role: parsed.jobTitle || 'Web3 Enthusiast',
+        bio: parsed.about || 'No bio available',
+        about: parsed.about || 'No bio available',
+        wallet: '0x...USER',
+        level: 1,
+        walletBadge: 'USER',
+        tokens: parsed.favoriteTokens || [],
+        image: parsed.photos?.[0] || 'https://picsum.photos/seed/user/720/720',
+      };
+    }
+  } catch (error) {
+    console.error('Error loading user profile:', error);
+  }
+  
+  return null;
+};
+
 export default function SwipePage() {
-  const router = useRouter();
-  const [range, setRange] = useState(10);
-  const [tokenHeld, setTokenHeld] = useState('$SWIF');
-  const [walletAge, setWalletAge] = useState('LAST 30 DAYS');
-  const [filterToggles, setFilterToggles] = useState({
-    onlineNow: true,
-    pumpFun: true,
-    newWallets: false,
-  });
+  const [draftFilters, setDraftFilters] = useState<SwipeFilters>(() => createDefaultFilters());
+  const [appliedFilters, setAppliedFilters] = useState<SwipeFilters>(() => createDefaultFilters());
   const [notifications, setNotifications] = useState(notificationSeed);
   const [activeIndex, setActiveIndex] = useState(0);
   const [cardAnimation, setCardAnimation] = useState<CardAnimation>(null);
   const [isBoosting, setIsBoosting] = useState(false);
 
-  const activeProfile = profileDeck[activeIndex % profileDeck.length];
-  const secondaryProfiles = useMemo(() => {
-    return [1, 2].map((offset) => profileDeck[(activeIndex + offset) % profileDeck.length]);
-  }, [activeIndex]);
+  const userProfile = loadUserProfile();
+  
+  const dynamicProfileDeck = useMemo(() => {
+    if (userProfile) {
+      return [userProfile, ...profileDeck];
+    }
+    return profileDeck;
+  }, [userProfile]);
+
+  const availableTokens = useMemo(() => {
+    const tokenSet = new Set<string>();
+    dynamicProfileDeck.forEach((profile) => {
+      profile.tokens.forEach((token) => tokenSet.add(token));
+    });
+    return Array.from(tokenSet).sort();
+  }, [dynamicProfileDeck]);
+
+  const availableInterests = useMemo(() => {
+    const interestSet = new Set<string>();
+    dynamicProfileDeck.forEach((profile) => {
+      profile.interests?.forEach((interest) => interestSet.add(interest));
+    });
+    return Array.from(interestSet).sort();
+  }, [dynamicProfileDeck]);
+
+  const availableLocations = useMemo(() => {
+    return Array.from(new Set(dynamicProfileDeck.map((profile) => profile.location).filter(Boolean))).sort();
+  }, [dynamicProfileDeck]);
+
+  const availableGenders = useMemo(() => {
+    return Array.from(new Set(dynamicProfileDeck.map((profile) => profile.gender).filter(Boolean))).sort();
+  }, [dynamicProfileDeck]);
+
+  const filteredDeck = useMemo(() => {
+    return dynamicProfileDeck.filter((profile) => {
+      if (appliedFilters.token !== 'ANY' && !profile.tokens.includes(appliedFilters.token)) return false;
+      if (appliedFilters.interests.length && !appliedFilters.interests.some((i) => profile.interests?.includes(i))) return false;
+      if (appliedFilters.location !== 'ANY' && profile.location !== appliedFilters.location) return false;
+      if (appliedFilters.gender !== 'ANY' && profile.gender !== appliedFilters.gender) return false;
+      return true;
+    });
+  }, [dynamicProfileDeck, appliedFilters]);
+
+  const deckInUse = filteredDeck.length > 0 ? filteredDeck : dynamicProfileDeck;
+  const activeProfile = deckInUse[activeIndex % deckInUse.length];
+  const secondaryProfiles = [1, 2].map((offset) => deckInUse[(activeIndex + offset) % deckInUse.length]);
 
   const advanceCard = (direction: CardAnimation) => {
     if (cardAnimation) return;
     setCardAnimation(direction);
     setTimeout(() => {
-      setActiveIndex((prev) => (prev + 1) % profileDeck.length);
+      setActiveIndex((prev) => (prev + 1) % dynamicProfileDeck.length);
       setCardAnimation(null);
     }, 320);
   };
@@ -166,11 +280,11 @@ export default function SwipePage() {
   const currentCardStyle = cardAnimation ? {} : getTransformStyle();
   const cardAnimationClass = cardAnimation ? `swipe-card--animate-${cardAnimation}` : '';
 
-  const handleToggle = (key: keyof typeof filterToggles) => {
-    setFilterToggles((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
-
   const handleApplyFilters = () => {
+    setAppliedFilters((prev) => ({
+      ...prev,
+    }));
+    setActiveIndex(0);
     setNotifications((prev) =>
       prev.map((item) =>
         item.status === 'new'
@@ -195,54 +309,9 @@ export default function SwipePage() {
 
   const clearNotifications = () => setNotifications([]);
 
-  const handleProfileAction = (path: string) => {
-    router.push(path);
-  };
-
   return (
     <div className="swipe-page">
-      <header className="swipe-header">
-        <button className="swipe-logo" aria-label="PumpInder home">
-          PUMPINDER™
-        </button>
-        <nav className="swipe-nav-toggle" aria-label="Primary navigation">
-          <button className="is-active">Swipe</button>
-          <button onClick={() => router.push('/chat')}>Chat</button>
-        </nav>
-        <div className="swipe-header-right">
-          <button 
-            className="swipe-balance" 
-            aria-label="Wallet summary"
-            onClick={() => router.push('/balance')}
-          >
-            <span className="ui-font text-value">4,200</span>
-            <span className="ui-font text-label">$PINDER</span>
-          </button>
-          <div className="profile-dropdown-container">
-            <button className="profile-button" aria-label="Profile">
-              <User size={20} strokeWidth={2} />
-            </button>
-            <div className="profile-dropdown" role="menu" aria-label="Profile actions">
-              <button
-                className="profile-dropdown-item"
-                role="menuitem"
-                onClick={() => handleProfileAction('/profile/edit')}
-              >
-                <Edit size={16} strokeWidth={2} />
-                Edit Profile
-              </button>
-              <button
-                className="profile-dropdown-item"
-                role="menuitem"
-                onClick={() => handleProfileAction('/settings')}
-              >
-                <Settings size={16} strokeWidth={2} />
-                Settings
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+      <AppHeader activePage="swipe" balanceDisplay="100.00" />
 
       <main className="swipe-grid">
         <section className="filters-panel" aria-labelledby="filters-heading">
@@ -250,105 +319,118 @@ export default function SwipePage() {
             <span>FILTERS</span>
           </div>
 
-          <div className="filters-block">
-            <div className="filters-label">
-              <Maximize size={18} />
-              <span>RANGE: {range} KM</span>
+          {availableInterests.length > 0 && (
+            <div className="filters-block">
+              <label className="filters-label" htmlFor="interests-select">
+                INTEREST:
+              </label>
+              <div className="input-shell">
+                <select
+                  id="interests-select"
+                  className="dropdown-select"
+                  value={draftFilters.interests[0] ?? 'ANY'}
+                  onChange={(event) =>
+                    setDraftFilters((prev) => ({
+                      ...prev,
+                      interests:
+                        event.target.value === 'ANY' ? [] : [event.target.value],
+                    }))
+                  }
+                >
+                  <option value="ANY">ANY INTEREST</option>
+                  {availableInterests.map((interest) => (
+                    <option key={interest} value={interest}>
+                      {interest.toUpperCase()}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={18} />
+              </div>
             </div>
-            <input
-              type="range"
-              min={1}
-              max={50}
-              value={range}
-              onChange={(event) => setRange(Number(event.target.value))}
-              className="range-slider"
-            />
-          </div>
+          )}
+
+          {availableLocations.length > 0 && (
+            <div className="filters-block">
+              <label className="filters-label" htmlFor="location-select">
+                LOCATION:
+              </label>
+              <div className="input-shell">
+                <select
+                  id="location-select"
+                  className="dropdown-select"
+                  value={draftFilters.location}
+                  onChange={(event) =>
+                    setDraftFilters((prev) => ({ ...prev, location: event.target.value }))
+                  }
+                >
+                  <option value="ANY">ANY LOCATION</option>
+                  {availableLocations.map((location) => (
+                    <option key={location} value={location}>
+                      {location}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={18} />
+              </div>
+            </div>
+          )}
+
+          {availableGenders.length > 0 && (
+            <div className="filters-block">
+              <label className="filters-label" htmlFor="gender-select">
+                GENDER:
+              </label>
+              <div className="input-shell">
+                <select
+                  id="gender-select"
+                  className="dropdown-select"
+                  value={draftFilters.gender}
+                  onChange={(event) =>
+                    setDraftFilters((prev) => ({ ...prev, gender: event.target.value }))
+                  }
+                >
+                  <option value="ANY">ANY GENDER</option>
+                  {availableGenders.map((gender) => (
+                    <option key={gender} value={gender}>
+                      {gender}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={18} />
+              </div>
+            </div>
+          )}
 
           <div className="filters-block">
-            <p className="filters-label">SHOW:</p>
-            <div className="toggle-group">
-              <button
-                type="button"
-                className={`toggle-pill ${filterToggles.onlineNow ? 'is-on' : ''}`}
-                onClick={() => handleToggle('onlineNow')}
-              >
-                <span>ONLINE NOW</span>
-                <ToggleRight
-                  size={26}
-                  strokeWidth={2.5}
-                  className="toggle-icon"
-                  style={{ transform: filterToggles.onlineNow ? 'rotate(0deg)' : 'rotate(180deg)' }}
-                />
-              </button>
-              <button
-                type="button"
-                className={`toggle-pill ${filterToggles.pumpFun ? 'is-on' : ''}`}
-                onClick={() => handleToggle('pumpFun')}
-              >
-                <span>PUMP.FUN DEGENS</span>
-                <ToggleRight
-                  size={26}
-                  strokeWidth={2.5}
-                  className="toggle-icon"
-                  style={{ transform: filterToggles.pumpFun ? 'rotate(0deg)' : 'rotate(180deg)' }}
-                />
-              </button>
-              <button
-                type="button"
-                className={`toggle-pill ${filterToggles.newWallets ? 'is-on' : ''}`}
-                onClick={() => handleToggle('newWallets')}
-              >
-                <span>NEW WALLETS (24H)</span>
-                <ToggleRight
-                  size={26}
-                  strokeWidth={2.5}
-                  className="toggle-icon"
-                  style={{ transform: filterToggles.newWallets ? 'rotate(0deg)' : 'rotate(180deg)' }}
-                />
-              </button>
-            </div>
-          </div>
-
-          <div className="filters-block">
-            <label className="filters-label" htmlFor="token-input">
+            <label className="filters-label" htmlFor="token-select">
               TOKEN HELD:
             </label>
             <div className="input-shell">
-              <input
-                id="token-input"
-                type="text"
-                value={tokenHeld}
-                onChange={(event) => setTokenHeld(event.target.value.toUpperCase())}
-                placeholder="Input: $TOKEN_SYMBOL"
-              />
-              <ChevronDown size={18} />
-            </div>
-          </div>
-
-          <div className="filters-block">
-            <label className="filters-label" htmlFor="wallet-age">
-              WALLET AGE:
-            </label>
-            <div className="input-shell">
               <select
-                id="wallet-age"
+                id="token-select"
                 className="dropdown-select"
-                value={walletAge}
-                onChange={(event) => setWalletAge(event.target.value)}
+                value={draftFilters.token}
+                onChange={(event) =>
+                  setDraftFilters((prev) => ({ ...prev, token: event.target.value }))
+                }
               >
-                {walletAgeOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
+                <option value="ANY">ANY TOKEN</option>
+                {availableTokens.map((token) => (
+                  <option key={token} value={token}>
+                    {token}
                   </option>
                 ))}
               </select>
+              <ChevronDown size={18} />
             </div>
           </div>
 
           <button type="button" className="apply-button" onClick={handleApplyFilters}>
             APPLY FILTERS
           </button>
+          {filteredDeck.length === 0 && (
+            <p className="filters-footnote">No exact matches. Showing full deck instead.</p>
+          )}
         </section>
 
         <section className="swipe-center" aria-live="polite">
@@ -399,24 +481,22 @@ export default function SwipePage() {
 
               <div className="swipe-card__body">
                 <div className="card-strip">
-                  <span>[ lvl {activeProfile.level} ]</span>
-                  <span className="strip-wallet">{activeProfile.wallet}</span>
-                  <span className="card-strip__badge">{activeProfile.walletBadge}</span>
+                  <div className="user-username">
+                    @{activeProfile.handle || activeProfile.name}
+                  </div>
+                  <div className="token-badges token-badges--inline">
+                    {activeProfile.tokens.map((token) => (
+                      <span key={token}>{token}</span>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="card-identity">
                   <h1 className="display-font card-name">
                     {activeProfile.name.toUpperCase()}, {activeProfile.age}
-                    <Check size={20} className="verified" />
                   </h1>
                   <p className="ui-font card-role">{activeProfile.role}</p>
-                  <p className="ui-font card-bio">{activeProfile.bio}</p>
-                </div>
-
-                <div className="token-badges">
-                  {activeProfile.tokens.map((token) => (
-                    <span key={token}>{token}</span>
-                  ))}
+                  <p className="ui-font card-bio">{activeProfile.about || activeProfile.bio}</p>
                 </div>
               </div>
             </div>
@@ -438,9 +518,9 @@ export default function SwipePage() {
                 disabled={isBoosting}
               >
                 <Rocket size={28} />
-                {isBoosting ? 'BOOSTING…' : 'BOOST'}
+                {isBoosting ? 'SUPERLIKING…' : 'SUPERLIKE'}
               </button>
-              <span className="cost-label">-500 $PINDER</span>
+              <span className="cost-label">-$5</span>
             </div>
             <div className="control-button">
               <button
@@ -449,9 +529,9 @@ export default function SwipePage() {
                 onClick={() => advanceCard('right')}
               >
                 <Heart size={28} />
-                SIGNAL
+                LIKE
               </button>
-              <span className="cost-label">-100 $PINDER</span>
+              <span className="cost-label">-$2</span>
             </div>
           </div>
         </section>

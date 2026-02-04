@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { AppHeader } from '@/components/AppHeader';
 
 const metrics = [
   { label: 'PINDER spent today', value: '1,420' },
@@ -10,8 +11,10 @@ const metrics = [
 
 export default function AdminPage() {
   return (
-    <div className="min-h-screen bg-pinder-dark text-white px-6 py-16">
-      <div className="mx-auto max-w-4xl space-y-10">
+    <div className="min-h-screen bg-(--bg-canvas) text-[#121212]">
+      <AppHeader logoType="pumpinder" showBalance={false} showProfile={false} showNav={false} />
+      
+      <div className="mx-auto max-w-4xl space-y-10 px-6 py-16">
         <div>
           <p className="text-sm uppercase tracking-[0.4em] text-pinder-pink">Dashboard preview</p>
           <h1 className="mt-2 text-4xl font-black">Admin Control Room</h1>

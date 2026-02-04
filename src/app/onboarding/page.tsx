@@ -7,14 +7,14 @@ import Image from 'next/image';
 import { generateMnemonic } from 'bip39';
 import { useWallet, type WalletInfo } from '@/hooks/useWallet';
 import { encryptPhrase, storePhraseBackup, hasPhraseBackup } from '@/utils/phraseVault';
-import { TrendingUp, Palette, Gamepad2, BarChart3, Smile, Wrench, Music, CameraIcon, Book, Heart, Coffee, Pizza, Plane, TreePine, Dumbbell, Film, PenTool, Globe, Zap, Moon, Sun, Cloud, Star, Flower, Cat, Dog, Bird, Fish } from 'lucide-react';
+import { TrendingUp, Palette, Gamepad2, BarChart3, Smile, Wrench, Music, CameraIcon, Book, Heart, Coffee, Pizza, Plane, TreePine, Dumbbell, Film, PenTool, Globe, Zap, Moon, Sun, Cloud, Star, Flower, Cat, Dog, Bird, Fish, Twitter } from 'lucide-react';
 
 const HANDLE_STORAGE_KEY = 'pinder_handle';
 const ONBOARDING_STORAGE_KEY = 'pinder_onboarding_payload';
 
 const allowedCharacters = /[^A-Z0-9_]/g;
 
-const steps = ['handle', 'birthday', 'gender', 'interests', 'photos'] as const;
+const steps = ['handle', 'birthday', 'gender', 'interests', 'photos', 'recovery'] as const;
 type StepId = typeof steps[number];
 
 const genderOptions = ['FEMALE', 'MALE', 'NON-BINARY', 'PREFER NOT TO SAY'];
@@ -55,12 +55,49 @@ const interestOptions = [
   { id: 'global', label: 'GLOBAL', icon: Globe },
 ];
 
+type RecoveryProvider = 'x' | 'google';
+type RecoveryAction = RecoveryProvider | 'skip';
+
+type RecoveryOption = {
+  id: RecoveryProvider;
+  label: string;
+  description: string;
+};
+
+const recoveryOptions: RecoveryOption[] = [
+  {
+    id: 'x',
+    label: 'Link X (Twitter)',
+    description: 'One-tap back in with your X handle whenever you log out.',
+  },
+  {
+    id: 'google',
+    label: 'Link Google (Gmail)',
+    description: 'Use Gmail to re-enter securely from any device.',
+  },
+];
+
+function GoogleGIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" role="presentation">
+      <path
+        fill="#4285F4"
+        d="M21.35 11.1H12v3.78h5.35c-.24 1.18-1.4 3.47-5.35 3.47-3.23 0-5.85-2.65-5.85-5.9s2.62-5.9 5.85-5.9c1.85 0 3.09.79 3.8 1.45l2.59-2.49C16.57 3.75 14.46 2.9 12 2.9 6.98 2.9 2.9 6.98 2.9 12s4.08 9.1 9.1 9.1c5.21 0 8.63-3.65 8.63-8.78 0-.5-.09-1.07-.28-1.22Z"
+      />
+      <path fill="#34A853" d="M12 22c2.43 0 4.48-.8 5.97-2.17l-2.83-2.19c-.79.55-1.8.89-3.14.89-2.41 0-4.45-1.62-5.18-3.8H3.9v2.39C5.39 19.92 8.43 22 12 22Z" />
+      <path fill="#FBBC05" d="M6.82 14.73c-.19-.59-.3-1.21-.3-1.86 0-.65.11-1.27.3-1.86V8.62H3.9A9.09 9.09 0 0 0 3 12c0 1.18.21 2.31.9 3.38z" />
+      <path fill="#EA4335" d="M12 7.37c1.32 0 2.35.45 3.07 1.04l2.3-2.24C16.47 4.96 14.43 4 12 4 8.43 4 5.39 6.08 3.9 9.27l2.92 2.34C7.55 8.99 9.59 7.37 12 7.37Z" />
+    </svg>
+  );
+}
+
 type OnboardingState = {
   handle: string;
   birthday: string;
   gender: string;
   interests: string[];
   photos: string[];
+  recoveryMethod: '' | RecoveryProvider;
 };
 
 const defaultState: OnboardingState = {
@@ -69,6 +106,7 @@ const defaultState: OnboardingState = {
   gender: '',
   interests: [],
   photos: Array(5).fill(''),
+  recoveryMethod: '',
 };
 
 export default function OnboardingPage() {
@@ -104,6 +142,10 @@ export default function OnboardingPage() {
             photos: Array.isArray(parsed.photos) && parsed.photos.length
               ? [...parsed.photos, ...Array(Math.max(0, 5 - parsed.photos.length)).fill('')].slice(0, 5)
               : Array(5).fill(''),
+            recoveryMethod:
+              parsed.recoveryMethod === 'x' || parsed.recoveryMethod === 'google'
+                ? parsed.recoveryMethod
+                : '',
           });
         } catch (error) {
           console.warn('Unable to parse onboarding payload', error);
@@ -175,13 +217,11 @@ export default function OnboardingPage() {
     if (!isCurrentStepValid) return;
 
     if (currentStepIndex >= steps.length - 1) {
-      persistForm(form);
-      setShowWalletModal(true);
       return;
     }
 
     setCurrentStepIndex((prev) => prev + 1);
-  }, [currentStepIndex, form, isCurrentStepValid, persistForm]);
+  }, [currentStepIndex, isCurrentStepValid]);
 
   const handlePreviousStep = useCallback(() => {
     if (currentStepIndex > 0) {
@@ -220,6 +260,29 @@ export default function OnboardingPage() {
       return { ...prev, photos: updated };
     });
   };
+
+  const handleRecoveryComplete = useCallback(
+    (action: RecoveryAction) => {
+      setForm((prev) => {
+        const updated: OnboardingState = {
+          ...prev,
+          recoveryMethod: action === 'skip' ? '' : action,
+        };
+        persistForm(updated);
+        return updated;
+      });
+      setShowWalletModal(true);
+    },
+    [persistForm]
+  );
+
+  const handleRecoveryLink = useCallback(
+    (provider: RecoveryProvider) => {
+      console.info(`Starting ${provider.toUpperCase()} OAuth flow (placeholder).`);
+      handleRecoveryComplete(provider);
+    },
+    [handleRecoveryComplete]
+  );
 
   const updateField = (field: StepId, value: string) => {
     if (field === 'handle') {
@@ -340,6 +403,8 @@ export default function OnboardingPage() {
 
   const currentStep = steps[currentStepIndex];
   const isHandleStep = currentStep === 'handle';
+  const isRecoveryStep = currentStep === 'recovery';
+  const isPreRecoveryStep = currentStepIndex === steps.length - 2;
 
   const renderStepContent = () => {
     switch (currentStep) {
@@ -485,6 +550,65 @@ export default function OnboardingPage() {
             </div>
           </>
         );
+      case 'recovery':
+        return (
+          <>
+            <div className="mt-8 space-y-3">
+              <h1 className="display-font text-5xl leading-tight tracking-widest">ADD ACCOUNT RECOVERY</h1>
+              <p className="ui-font text-sm italic text-ink-secondary whitespace-pre-line">
+                {'// OPTIONAL BACKUP SIGN-IN. NO WALLET CONTROL GIVEN.'}
+              </p>
+            </div>
+
+            <div className="recovery-card">
+              <p className="recovery-card__lead">
+                Link X or Google so you can get back into PumpInder if you ever log out. This method is for account access
+                only — it will not recover your wallet.
+              </p>
+              <ul className="recovery-card__list">
+                <li>The linked account is only used to authenticate you.</li>
+                <li>We never see or store your wallet keys or secret phrase.</li>
+                <li>You keep full control of your wallet — unlink anytime.</li>
+              </ul>
+              <p className="recovery-card__note">No private wallet data or recovery phrases are shared.</p>
+            </div>
+
+            <div className="recovery-options">
+              {recoveryOptions.map((option) => (
+                <button
+                  type="button"
+                  key={option.id}
+                  className="recovery-option"
+                  onClick={() => handleRecoveryLink(option.id)}
+                >
+                  <span
+                    className={`recovery-option__icon recovery-option__icon--${option.id}`}
+                    aria-hidden="true"
+                  >
+                    {option.id === 'x' ? <Twitter size={22} /> : <GoogleGIcon />}
+                  </span>
+                  <span>
+                    <span className="recovery-option__label">{option.label}</span>
+                    <span className="recovery-option__caption">{option.description}</span>
+                  </span>
+                  <span className="recovery-option__cta">Link</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="recovery-note">
+              <p>Optional, but recommended.</p>
+              <p>Link an account so you can log back in easily if you ever log out.</p>
+            </div>
+
+            <div className="flex flex-col items-center gap-2 mt-4">
+              <button type="button" className="skip-link" onClick={() => handleRecoveryComplete('skip')}>
+                Skip for now
+              </button>
+              <p className="recovery-skip-copy">You can finish this later from [Account recovery placeholder].</p>
+            </div>
+          </>
+        );
       default:
         return null;
     }
@@ -523,14 +647,16 @@ export default function OnboardingPage() {
 
           {renderStepContent()}
 
-          <button
-            type="submit"
-            className="btn-block" 
-            style={{ marginTop: '3rem' }}
-            disabled={!isCurrentStepValid}
-          >
-            {currentStepIndex === steps.length - 1 ? 'FINISH' : 'NEXT'}
-          </button>
+          {!isRecoveryStep && (
+            <button
+              type="submit"
+              className="btn-block" 
+              style={{ marginTop: '3rem' }}
+              disabled={!isCurrentStepValid}
+            >
+              {isPreRecoveryStep ? 'CONTINUE' : 'NEXT'}
+            </button>
+          )}
         </form>
       </main>
 
@@ -588,7 +714,7 @@ export default function OnboardingPage() {
             ) : (
               <>
                 <p className="ui-font text-sm text-ink-secondary mt-4">
-                  Save these words somewhere safe. They're the only way to unlock this wallet again.
+                  Save these words somewhere safe. They&apos;re the only way to unlock this wallet again.
                 </p>
                 <div className="wallet-passphrase-box">
                   <ol className="wallet-passphrase-grid">
