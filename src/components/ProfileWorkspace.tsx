@@ -3,11 +3,7 @@
 import Link from 'next/link';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-
-const STORAGE_KEYS = {
-  profile: 'pinder_profile',
-  hasProfile: 'pinder_has_profile',
-} as const;
+import { useUserProfile } from '@/hooks/useUserProfile';
 
 type ProfileFormState = {
   name: string;
@@ -49,32 +45,33 @@ export function ProfileWorkspace({
   footnote,
   successRedirect = '/swipe',
   backHref,
-  backLabel = 'Back',
+  backLabel,
   onSubmit,
 }: ProfileWorkspaceProps) {
   const router = useRouter();
-
+  const { saveProfile } = useUserProfile();
   const [form, setForm] = useState<ProfileFormState>(defaultForm);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const storedProfile = localStorage.getItem(STORAGE_KEYS.profile);
+    
+    const storedProfile = localStorage.getItem('pinder_profile');
     if (!storedProfile) return;
     try {
       const parsed = JSON.parse(storedProfile);
       setForm({
-        name: parsed.name ?? '',
-        age: parsed.age ? String(parsed.age) : '',
-        location: parsed.location ?? '',
-        occupation: parsed.occupation ?? '',
-        bio: parsed.bio ?? '',
-        imageUrl: parsed.imageUrl ?? '',
-        interests: Array.isArray(parsed.interests) ? parsed.interests.join(', ') : parsed.interests ?? '',
+        name: parsed.name || '',
+        age: parsed.age || '',
+        location: parsed.location || '',
+        occupation: parsed.occupation || '',
+        bio: parsed.bio || '',
+        imageUrl: parsed.imageUrl || '',
+        interests: parsed.interests?.join(', ') || '',
       });
     } catch (err) {
-      console.warn('Failed to parse stored profile', err);
+      console.warn('Failed to load stored profile:', err);
     }
   }, []);
 
@@ -90,7 +87,7 @@ export function ProfileWorkspace({
     setForm((prev) => ({ ...prev, [field]: target.value }));
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
 
@@ -127,12 +124,23 @@ export function ProfileWorkspace({
 
     try {
       setIsSaving(true);
-      localStorage.setItem(STORAGE_KEYS.profile, JSON.stringify(profilePayload));
-      localStorage.setItem(STORAGE_KEYS.hasProfile, 'true');
+      
+      const userProfileData = {
+        handle: form.name.trim().toLowerCase().replace(/\s+/g, '_'),
+        birthday: new Date().toISOString().split('T')[0],
+        gender: 'other',
+        interests: interestTags,
+        photos: [form.imageUrl.trim() || `https://picsum.photos/seed/${encodeURIComponent(form.name.trim() || 'pinder')}/800/1200`],
+      };
+
+      await saveProfile(userProfileData);
+      
+      localStorage.setItem('pinder_profile', JSON.stringify(profilePayload));
+      localStorage.setItem('pinder_has_profile', 'true');
       router.push(successRedirect);
     } catch (err) {
       console.error('Failed to save profile', err);
-      setError('Unable to save profile locally. Please try again.');
+      setError('Unable to save profile. Please try again.');
     } finally {
       setIsSaving(false);
     }

@@ -17,7 +17,6 @@ import {
   Film,
   Fish,
   Gamepad2,
-  Globe,
   Heart,
   Info,
   MoveLeft,
@@ -147,8 +146,6 @@ const normalizePhotos = (photos?: string[]) => {
 export default function EditProfilePage() {
   const [form, setForm] = useState<ProfileEditorState>(defaultForm);
   const [favoriteTokenInput, setFavoriteTokenInput] = useState('');
-  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-  const [error, setError] = useState<string | null>(null);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const photoCount = useMemo(() => form.photos.filter(Boolean).length, [form.photos]);
 
@@ -235,15 +232,6 @@ export default function EditProfilePage() {
     });
   };
 
-  const handleMovePhoto = (from: number, direction: -1 | 1) => {
-    const to = from + direction;
-    if (to < 0 || to >= MAX_PHOTOS) return;
-    setForm((prev) => {
-      const updated = [...prev.photos];
-      [updated[from], updated[to]] = [updated[to], updated[from]];
-      return { ...prev, photos: updated };
-    });
-  };
 
   const handleSetDisplayPhoto = (index: number) => {
     if (index === 0) return;
@@ -290,12 +278,11 @@ export default function EditProfilePage() {
       return;
     }
     if (form.favoriteTokens.length >= MAX_FAVORITE_TOKENS) {
-      setError(`You can only spotlight ${MAX_FAVORITE_TOKENS} tokens.`);
+      console.error(`You can only spotlight ${MAX_FAVORITE_TOKENS} tokens.`);
       return;
     }
     setForm((prev) => ({ ...prev, favoriteTokens: [...prev.favoriteTokens, token] }));
     setFavoriteTokenInput('');
-    setError(null);
   };
 
   const handleFavoriteTokenRemove = (token: string) => {
@@ -304,19 +291,16 @@ export default function EditProfilePage() {
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setError(null);
 
     if (!form.name.trim()) {
-      setError('Name is required.');
+      console.error('Name is required.');
       return;
     }
 
     if (!form.username.trim()) {
-      setError('Username is required.');
+      console.error('Username is required.');
       return;
     }
-
-    setSaveState('saving');
 
     try {
       if (typeof window !== 'undefined') {
@@ -353,18 +337,17 @@ export default function EditProfilePage() {
         localStorage.setItem(ONBOARDING_STORAGE_KEY, JSON.stringify(onboardingPayload));
       }
 
-      setSaveState('saved');
-      setTimeout(() => setSaveState('idle'), 2500);
+      console.log('Profile saved successfully');
+      setTimeout(() => console.log('Save state idle'), 2500);
     } catch (err) {
       console.error('Unable to save profile', err);
-      setError('Unable to save your profile locally. Please try again.');
-      setSaveState('error');
+      console.error('Unable to save your profile locally. Please try again.');
     }
   };
 
   return (
     <div className="swipe-page edit-profile-page">
-      <AppHeader activePage={null} balanceDisplay="100.00" />
+      <AppHeader activePage={null} balance={100.00} />
 
       <div className="content-width">
         <header className="card editor-section span-12" aria-live="polite">

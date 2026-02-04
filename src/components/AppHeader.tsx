@@ -5,28 +5,29 @@ import { useRouter } from 'next/navigation';
 import { Edit, Settings, User } from 'lucide-react';
 
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { ConnectWalletButton } from '@/components/ConnectWalletButton';
 
 type ActivePage = 'swipe' | 'chat' | null;
 type LogoType = 'pumpinder' | 'back';
 
 interface AppHeaderProps {
   activePage?: ActivePage;
-  balanceDisplay?: string;
   logoType?: LogoType;
   showBalance?: boolean;
   showProfile?: boolean;
   showNav?: boolean;
   onLogoClick?: () => void;
+  balance?: number; // Add balance prop for ConnectWalletButton
 }
 
 export function AppHeader({
   activePage = null,
-  balanceDisplay = '0.00',
   logoType = 'pumpinder',
   showBalance = true,
   showProfile = true,
   showNav = true,
   onLogoClick,
+  balance = 100.00, // Default balance
 }: AppHeaderProps) {
   const router = useRouter();
   const { getProfilePicture } = useUserProfile();
@@ -80,14 +81,7 @@ export function AppHeader({
       {(showBalance || showProfile) && (
         <div className="swipe-header-right">
           {showBalance && (
-            <button 
-              className="swipe-balance" 
-              aria-label="Wallet summary"
-              onClick={() => router.push('/balance')}
-            >
-              <span className="ui-font text-value">{balanceDisplay}</span>
-              <span className="ui-font text-label">$PINDER</span>
-            </button>
+            <ConnectWalletButton balance={balance} />
           )}
           
           {showProfile && (

@@ -1,13 +1,24 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { supabase } from '@/lib/supabase';
+import { useWallet } from '@/hooks/useWallet';
 
 type Language = 'en' | 'es' | 'fr' | 'de' | 'ja' | 'zh';
+type Theme = 'light' | 'dark' | 'system';
+
+interface AppearanceSettings {
+  theme: Theme;
+  language: Language;
+  monochromePictures: boolean;
+}
 
 interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
   t: (key: string) => string;
+  appearanceSettings: AppearanceSettings | null;
+  updateAppearanceSettings: (settings: Partial<AppearanceSettings>) => void;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -16,24 +27,80 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 import translations from '../translations';
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const getInitialLanguage = (): Language => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('appearance-settings');
-      if (saved) {
-        try {
-          const settings = JSON.parse(saved);
-          if (settings.language) {
-            return settings.language;
-          }
-        } catch (error) {
-          console.warn('Failed to load language settings:', error);
-        }
-      }
-    }
-    return 'en';
-  };
+  const { wallet } = useWallet();
+  const [appearanceSettings, setAppearanceSettings] = useState<AppearanceSettings | null>(null);
 
-  const [language, setLanguageState] = useState<Language>(getInitialLanguage);
+  useEffect(() => {
+    const defaultSettings: AppearanceSettings = {
+      theme: 'system',
+      language: 'en',
+      monochromePictures: false,
+    };
+
+    const loadSettings = async () => {
+      if (!wallet?.publicKey) {
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('user_settings')
+          .select('theme, language, monochrome_pictures')
+          .eq('wallet_public_key', wallet.publicKey)
+          .single();
+
+        if (error && error.code !== 'PGRST116') {
+          console.error('Error loading appearance settings:', error);
+        } else if (data) {
+          setAppearanceSettings({
+            theme: data.theme,
+            language: data.language,
+            monochromePictures: data.monochrome_pictures,
+          });
+        } else {
+          setAppearanceSettings(defaultSettings);
+        }
+      } catch (error) {
+        console.error('Error loading appearance settings:', error);
+        setAppearanceSettings(defaultSettings);
+      } finally {
+        // Settings loaded
+      }
+    };
+
+    loadSettings();
+  }, [wallet?.publicKey]);
+
+  const language = appearanceSettings?.language || 'en';
+
+  const updateAppearanceSettings = async (newSettings: Partial<AppearanceSettings>) => {
+    if (!wallet?.publicKey) {
+      console.error('Wallet not connected');
+      return;
+    }
+
+    const updatedSettings = { ...appearanceSettings, ...newSettings } as AppearanceSettings;
+    setAppearanceSettings(updatedSettings);
+
+    try {
+      const { error } = await supabase
+        .from('user_settings')
+        .upsert({
+          wallet_public_key: wallet.publicKey,
+          theme: updatedSettings.theme,
+          language: updatedSettings.language,
+          monochrome_pictures: updatedSettings.monochromePictures,
+        }, {
+          onConflict: 'wallet_public_key'
+        });
+
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
+      console.error('Error saving appearance settings:', error);
+    }
+  };
 
   // Update HTML lang attribute when language changes
   useEffect(() => {
@@ -41,24 +108,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   }, [language]);
 
   const setLanguage = (lang: Language) => {
-    setLanguageState(lang);
-    
-    // Update localStorage appearance settings
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('appearance-settings');
-      let settings = { theme: 'system', language: 'en', monochromePictures: false };
-      
-      if (saved) {
-        try {
-          settings = JSON.parse(saved);
-        } catch (error) {
-          console.warn('Failed to parse appearance settings:', error);
-        }
-      }
-      
-      settings.language = lang;
-      localStorage.setItem('appearance-settings', JSON.stringify(settings));
-    }
+    updateAppearanceSettings({ language: lang });
   };
 
   const t = (key: string): string => {
@@ -86,7 +136,13 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+    <LanguageContext.Provider value={{ 
+      language, 
+      setLanguage, 
+      t, 
+      appearanceSettings, 
+      updateAppearanceSettings 
+    }}>
       {children}
     </LanguageContext.Provider>
   );

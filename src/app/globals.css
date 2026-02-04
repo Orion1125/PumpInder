@@ -14,18 +14,6 @@
   --error-pass: #FFFFFF;
 }
 
-@keyframes walletBar {
-  0% {
-    transform: translateX(-100%);
-  }
-  50% {
-    transform: translateX(0%);
-  }
-  100% {
-    transform: translateX(100%);
-  }
-}
-
 
 .edit-profile-page .content-width {
   max-width: 1200px;
@@ -506,12 +494,6 @@ body::after {
   font-size: 6.5rem;
   letter-spacing: -0.02em;
   text-transform: uppercase;
-}
-
-@media (max-width: 767px) {
-  .h1 {
-    font-size: 4rem;
-  }
 }
 
 .h2 {
@@ -1606,72 +1588,6 @@ body::after {
   border-bottom: 1px solid var(--bg-grid-lines);
 }
 
-.tip-dropdown-container {
-  position: relative;
-  display: inline-block;
-}
-
-.tip-dropdown-container::before {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  height: 0.5rem;
-  z-index: 29;
-}
-
-.tip-dropdown {
-  position: absolute;
-  top: calc(100% + 0.5rem);
-  right: 0;
-  background: #FFFFFF;
-  border: 2px solid var(--ink-primary);
-  border-radius: 8px;
-  box-shadow: 4px 4px 0px var(--ink-primary);
-  min-width: 180px;
-  z-index: 30;
-  overflow: hidden;
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(-4px);
-  pointer-events: none;
-  transition: opacity 0.15s ease, transform 0.15s ease;
-}
-
-.tip-dropdown.open {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0);
-  pointer-events: auto;
-}
-
-.tip-dropdown-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  width: 100%;
-  padding: 0.75rem 1rem;
-  border: none;
-  background: transparent;
-  font-family: var(--font-jetbrains-mono);
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  color: var(--ink-primary);
-  cursor: pointer;
-  transition: background 0.15s ease;
-  text-align: left;
-}
-
-.tip-dropdown-item:hover,
-.tip-dropdown-item:focus-visible {
-  background: var(--bg-canvas);
-}
-
-.tip-dropdown-item:not(:last-child) {
-  border-bottom: 1px solid var(--bg-grid-lines);
-}
-
 .swipe-logo {
   font-family: var(--font-clash-display);
   font-size: 1.5rem;
@@ -2094,15 +2010,6 @@ body::after {
 @media (max-width: 640px) {
   .balance-page .content-width {
     padding-top: 8rem;
-  }
-
-  .wallet-connect-shell {
-    grid-template-columns: 1fr;
-  }
-
-  .wallet-connect-button {
-    min-width: unset;
-    flex: 1 1 100%;
   }
 
   .balance-page .action-row {

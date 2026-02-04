@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 
 import { AppHeader } from '@/components/AppHeader';
+import { useFeePaymentModal } from '@/components/FeePaymentModal';
+import { useWallet } from '@/hooks/useWallet';
 import { useSwipe } from '@/hooks/useSwipe';
 
 const ONBOARDING_STORAGE_KEY = 'pinder_onboarding_payload';
@@ -203,6 +205,9 @@ export default function SwipePage() {
   const [cardAnimation, setCardAnimation] = useState<CardAnimation>(null);
   const [isBoosting, setIsBoosting] = useState(false);
 
+  const { Modal, initiatePayment } = useFeePaymentModal();
+  const { } = useWallet();
+
   const userProfile = loadUserProfile();
   
   const dynamicProfileDeck = useMemo(() => {
@@ -259,18 +264,22 @@ export default function SwipePage() {
     }, 320);
   };
 
-  const handleBoost = () => {
+  const handleBoost = async () => {
     if (isBoosting) return;
     setIsBoosting(true);
-    setTimeout(() => {
-      setIsBoosting(false);
-      advanceCard('up');
-    }, 520);
+    
+    // Initiate payment for SUPERLIKE
+    await initiatePayment('SUPERLIKE');
+  };
+
+  const handleLike = async () => {
+    // Initiate payment for LIKE
+    await initiatePayment('LIKE');
   };
 
   const { swipeHandlers, getTransformStyle, swipeDirection, swipeOpacity, isDragging } = useSwipe({
     onSwipeLeft: () => advanceCard('left'),
-    onSwipeRight: () => advanceCard('right'),
+    onSwipeRight: handleLike,
     onSwipeUp: () => advanceCard('up'),
     threshold: 140,
     verticalThreshold: 160,
@@ -311,7 +320,7 @@ export default function SwipePage() {
 
   return (
     <div className="swipe-page">
-      <AppHeader activePage="swipe" balanceDisplay="100.00" />
+      <AppHeader activePage="swipe" balance={100.00} />
 
       <main className="swipe-grid">
         <section className="filters-panel" aria-labelledby="filters-heading">
@@ -520,18 +529,18 @@ export default function SwipePage() {
                 <Rocket size={28} />
                 {isBoosting ? 'SUPERLIKING…' : 'SUPERLIKE'}
               </button>
-              <span className="cost-label">-$5</span>
+              <span className="cost-label">-$2</span>
             </div>
             <div className="control-button">
               <button
                 type="button"
                 className="mech-button mech-button--signal"
-                onClick={() => advanceCard('right')}
+                onClick={handleLike}
               >
                 <Heart size={28} />
                 LIKE
               </button>
-              <span className="cost-label">-$2</span>
+              <span className="cost-label">-$0.5</span>
             </div>
           </div>
         </section>
@@ -567,6 +576,9 @@ export default function SwipePage() {
           </button>
         </section>
       </main>
+      
+      {/* Fee Payment Modal */}
+      <Modal />
     </div>
   );
 }

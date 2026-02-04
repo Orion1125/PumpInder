@@ -71,7 +71,7 @@ export default function SettingsMainPage() {
 
   return (
     <div className="swipe-page">
-      <AppHeader activePage="swipe" balanceDisplay="100.00" />
+      <AppHeader activePage="swipe" balance={100.00} />
       
       <div className="flex justify-center">
         <section className="w-full max-w-md bg-white border-4 border-black rounded-xl shadow-[10px_10px_0px_rgba(0,0,0,0.2)] overflow-hidden" aria-labelledby="settings-heading">

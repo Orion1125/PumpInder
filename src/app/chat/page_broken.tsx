@@ -38,6 +38,8 @@ const formatTimestamp = (timestamp: string) => {
 
 const gasEstimate = (id: number) => `~${(0.001 + id * 0.00042).toFixed(3)} SOL`;
 
+const isThreadOnline = (thread: ChatThread) =>
+  thread.lastActive.toLowerCase().includes('m') || thread.lastActive.toLowerCase().includes('now');
 
 const getLastMessageStatus = (thread: ChatThread) => {
   const lastMessage = thread.messages[thread.messages.length - 1];
@@ -81,41 +83,45 @@ function ChatPageInner() {
   );
 
   const filteredThreads = useMemo(
-    () => sortedThreads.filter((thread) => thread.matchName.toLowerCase().includes(searchTerm.toLowerCase())),
+    () =>
+      sortedThreads.filter((thread) =>
+        thread.matchName.toLowerCase().includes(searchTerm.toLowerCase()),
+      ),
     [sortedThreads, searchTerm],
   );
 
-  const pinnedSignal = threads.find((thread) => thread.id === 1);
+  const pinnedSignal = sortedThreads[0];
 
   const playClickSound = useCallback(() => {
-    if (!audioCtxRef.current) {
-      audioCtxRef.current = new (window.AudioContext || (window as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext)();
-    }
-    const audioContext = audioCtxRef.current;
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-    
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    
-    oscillator.frequency.value = 800;
+    if (typeof window === 'undefined') return;
+    const AudioCtx = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = audioCtxRef.current ?? new AudioCtx();
+    audioCtxRef.current = ctx;
+    const oscillator = ctx.createOscillator();
+    const gainNode = ctx.createGain();
     oscillator.type = 'square';
-    
-    gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
-    
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.1);
+    oscillator.frequency.value = 320;
+    gainNode.gain.value = 0.08;
+    oscillator.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    oscillator.start();
+    oscillator.stop(ctx.currentTime + 0.12);
   }, []);
 
   useEffect(() => {
-    if (activeThreadId) {
-      const timeout = setTimeout(() => {
-        setIsPeerTyping(true);
-        setTimeout(() => setIsPeerTyping(false), 3600);
-      }, 0);
-      return () => clearTimeout(timeout);
-    }
+    return () => {
+      audioCtxRef.current?.close();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!activeThreadId) return;
+    const timeout = setTimeout(() => {
+      setIsPeerTyping(true);
+      setTimeout(() => setIsPeerTyping(false), 3600);
+    }, 0);
+    return () => clearTimeout(timeout);
   }, [activeThreadId]);
 
   useEffect(() => {
@@ -171,14 +177,17 @@ function ChatPageInner() {
     }
     
     // Initiate payment for tip
-    await initiatePayment(feeType);
-    // TODO: Send tip notification to chat
-    console.log(`Tip of ${amount} initiated`);
+    await initiatePayment(feeType, (result) => {
+      if (result.success) {
+        // TODO: Send tip notification to chat
+        console.log(`Tip of ${amount} sent successfully`);
+      }
+    });
   };
 
   return (
     <div className="min-h-screen bg-(--bg-canvas) text-[#121212]">
-      <AppHeader activePage="chat" balance={MOCK_BALANCE} />
+      <AppHeader activePage="chat" balanceDisplay={MOCK_BALANCE.toFixed(2)} />
 
       <main className="main-content mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 px-4 pb-12 pt-28 lg:px-8">
         <div className="flex flex-col gap-3 text-xs uppercase tracking-[0.35em] text-[#555] sm:flex-row sm:items-center sm:justify-between">
@@ -206,6 +215,8 @@ function ChatPageInner() {
                       const thread = pinnedSignal;
                       return (
                         <button
+                          key={`pin-${thread.id}`}
+                          onClick={() => selectThread(thread.id)}
                           className={`flex w-full items-center gap-4 border-[3px] border-[#FFD700] bg-white px-3 py-3 text-left shadow-[4px_4px_0_#121212] transition hover:border-[#121212] ${
                             thread.id === activeThread?.id ? 'bg-[#FFF8D2]' : ''
                           }`}
@@ -466,11 +477,10 @@ function ChatPageInner() {
               </form>
             </section>
           </div>
-          
           {/* Fee Payment Modal */}
           <Modal />
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }
