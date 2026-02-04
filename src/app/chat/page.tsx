@@ -16,9 +16,7 @@ import { Search, Send, Coins, Check, Clock, TrendingUp, TrendingDown, Moon } fro
 import { useChatThreads } from '@/hooks/useChatThreads';
 import { AppHeader } from '@/components/AppHeader';
 import { useFeePaymentModal } from '@/components/FeePaymentModal';
-import type { ChatThread } from '@/types';
-
-const MOCK_BALANCE = 100;
+import type { ChatThread, ChatMessage } from '@/types';
 
 const ACTION_BUTTONS = [
   {
@@ -178,7 +176,7 @@ function ChatPageInner() {
 
   return (
     <div className="min-h-screen bg-(--bg-canvas) text-[#121212]">
-      <AppHeader activePage="chat" balance={MOCK_BALANCE} />
+      <AppHeader activePage="chat" />
 
       <main className="main-content mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 px-4 pb-12 pt-28 lg:px-8">
         <div className="flex flex-col gap-3 text-xs uppercase tracking-[0.35em] text-[#555] sm:flex-row sm:items-center sm:justify-between">
@@ -378,7 +376,7 @@ function ChatPageInner() {
 
                   {activeThread ? (
                     <>
-                      {activeThread.messages.map((msg) => {
+                      {activeThread.messages.map((msg: ChatMessage) => {
                         const isYou = msg.sender === 'you';
                         const getStatusIcon = () => {
                           if (!isYou || !msg.status) return null;

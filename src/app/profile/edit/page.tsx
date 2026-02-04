@@ -347,7 +347,7 @@ export default function EditProfilePage() {
 
   return (
     <div className="swipe-page edit-profile-page">
-      <AppHeader activePage={null} balance={100.00} />
+      <AppHeader activePage={null} />
 
       <div className="content-width">
         <header className="card editor-section span-12" aria-live="polite">

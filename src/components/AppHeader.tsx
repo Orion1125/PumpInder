@@ -17,7 +17,8 @@ interface AppHeaderProps {
   showProfile?: boolean;
   showNav?: boolean;
   onLogoClick?: () => void;
-  balance?: number; // Add balance prop for ConnectWalletButton
+  balance?: number; // Optional, will be overridden by real balance from wallet
+  onContinueSwiping?: () => void; // Callback for authentication completion
 }
 
 export function AppHeader({
@@ -27,7 +28,8 @@ export function AppHeader({
   showProfile = true,
   showNav = true,
   onLogoClick,
-  balance = 100.00, // Default balance
+  balance = 0, // Default balance
+  onContinueSwiping,
 }: AppHeaderProps) {
   const router = useRouter();
   const { getProfilePicture } = useUserProfile();
@@ -81,7 +83,7 @@ export function AppHeader({
       {(showBalance || showProfile) && (
         <div className="swipe-header-right">
           {showBalance && (
-            <ConnectWalletButton balance={balance} />
+            <ConnectWalletButton balance={balance} onContinueSwiping={onContinueSwiping} />
           )}
           
           {showProfile && (

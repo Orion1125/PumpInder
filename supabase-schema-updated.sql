@@ -21,6 +21,23 @@ CREATE TABLE profiles (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Social accounts table for OAuth connections
+CREATE TABLE social_accounts (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  wallet_public_key TEXT NOT NULL REFERENCES profiles(wallet_public_key) ON DELETE CASCADE,
+  provider TEXT NOT NULL CHECK (provider IN ('twitter', 'gmail')),
+  provider_user_id TEXT,
+  handle TEXT,
+  email TEXT,
+  access_token TEXT,
+  refresh_token TEXT,
+  token_expires_at TIMESTAMP WITH TIME ZONE,
+  verified BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(wallet_public_key, provider)
+);
+
 -- Chat threads table
 CREATE TABLE chat_threads (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
@@ -59,6 +76,8 @@ CREATE TABLE user_settings (
 -- Indexes for better performance
 CREATE INDEX idx_profiles_wallet_public_key ON profiles(wallet_public_key);
 CREATE INDEX idx_profiles_handle ON profiles(handle);
+CREATE INDEX idx_social_accounts_wallet ON social_accounts(wallet_public_key);
+CREATE INDEX idx_social_accounts_provider ON social_accounts(provider);
 CREATE INDEX idx_chat_threads_user_wallet ON chat_threads(user_wallet);
 CREATE INDEX idx_chat_threads_match_wallet ON chat_threads(match_wallet);
 CREATE INDEX idx_chat_messages_thread_id ON chat_messages(thread_id);
@@ -78,6 +97,9 @@ $$ language 'plpgsql';
 CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON profiles
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+CREATE TRIGGER update_social_accounts_updated_at BEFORE UPDATE ON social_accounts
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 CREATE TRIGGER update_chat_threads_updated_at BEFORE UPDATE ON chat_threads
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -89,6 +111,7 @@ CREATE TRIGGER update_user_settings_updated_at BEFORE UPDATE ON user_settings
 
 -- Row Level Security (RLS) policies
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE social_accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chat_threads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_settings ENABLE ROW LEVEL SECURITY;
@@ -102,6 +125,19 @@ CREATE POLICY "Users can update own profile" ON profiles
 
 CREATE POLICY "Users can insert own profile" ON profiles
     FOR INSERT WITH CHECK (wallet_public_key = auth.jwt() ->> 'wallet_public_key');
+
+-- Social accounts policies - users can only access their own social accounts
+CREATE POLICY "Users can view own social accounts" ON social_accounts
+    FOR SELECT USING (wallet_public_key = auth.jwt() ->> 'wallet_public_key');
+
+CREATE POLICY "Users can update own social accounts" ON social_accounts
+    FOR UPDATE USING (wallet_public_key = auth.jwt() ->> 'wallet_public_key');
+
+CREATE POLICY "Users can insert own social accounts" ON social_accounts
+    FOR INSERT WITH CHECK (wallet_public_key = auth.jwt() ->> 'wallet_public_key');
+
+CREATE POLICY "Users can delete own social accounts" ON social_accounts
+    FOR DELETE USING (wallet_public_key = auth.jwt() ->> 'wallet_public_key');
 
 -- Chat threads policies - users can only access threads they're part of
 CREATE POLICY "Users can view own chat threads" ON chat_threads

@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import { ArrowUp, Filter, Plus, Search, TrendingUp, Flame, ArrowDown, X, ShoppingCart } from 'lucide-react';
 import { AppHeader } from '@/components/AppHeader';
-
-const TREASURY_BALANCE = 14250;
+import { useBalance } from '@/hooks/useBalance';
+import { useWallet } from '@/hooks/useWallet';
 
 type TransactionType = 'BOOST' | 'SIGNAL' | 'RECEIVE' | 'PASS';
 
@@ -42,16 +42,30 @@ const formatCurrency = (value: number) =>
   });
 
 export default function BalancePage() {
+  const { totalBalanceUSD, isLoading } = useBalance();
+  const { isConnected } = useWallet();
   const [displayedBalance, setDisplayedBalance] = useState(0);
 
+  // Handle connection state changes separately
   useEffect(() => {
+    if (!isConnected) {
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      setDisplayedBalance(0);
+    }
+  }, [isConnected]);
+
+  // Handle balance animation when connected
+  useEffect(() => {
+    if (!isConnected) return;
+
     let frame = 0;
     const start = performance.now();
     const duration = 1500;
+    const targetBalance = totalBalanceUSD;
 
     const animate = (timestamp: number) => {
       const progress = Math.min((timestamp - start) / duration, 1);
-      setDisplayedBalance(TREASURY_BALANCE * progress);
+      setDisplayedBalance(targetBalance * progress);
 
       if (progress < 1) {
         frame = requestAnimationFrame(animate);
@@ -61,11 +75,11 @@ export default function BalancePage() {
     frame = requestAnimationFrame(animate);
 
     return () => cancelAnimationFrame(frame);
-  }, []);
+  }, [totalBalanceUSD, isConnected]);
 
   return (
     <div className="swipe-page balance-page">
-      <AppHeader activePage="swipe" balance={Math.min(displayedBalance, TREASURY_BALANCE)} />
+      <AppHeader activePage="swipe" />
 
       <div className="content-width">
 
@@ -77,10 +91,15 @@ export default function BalancePage() {
 
           <div className="hero-value">
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
-              <p className="balance-value">{formatCurrency(Math.min(displayedBalance, TREASURY_BALANCE))}</p>
-              <span style={{ fontSize: '2rem', fontWeight: '400', color: '#121212', fontFamily: 'JetBrains Mono, monospace' }}>$PINDER</span>
+              <p className="balance-value">{formatCurrency(displayedBalance)}</p>
+              <span className="balance-currency">$PINDER</span>
             </div>
-            <span className="trend-text">+ 12% vs last week</span>
+            {!isConnected && (
+              <p className="text-sm text-gray-500 mt-2">Connect your wallet to view your balance</p>
+            )}
+            {isLoading && (
+              <p className="text-sm text-gray-500 mt-2">Loading balance...</p>
+            )}
           </div>
 
           <div className="action-row">
@@ -114,39 +133,39 @@ export default function BalancePage() {
             </div>
           </div>
 
-          <div className="ledger-table" role="table" aria-label="Transaction ledger">
-            <div className="table-row table-header" role="row">
-              <span className="table-cell" role="columnheader">DATE</span>
-              <span className="table-cell" role="columnheader">TYPE</span>
-              <span className="table-cell" role="columnheader">ENTITY</span>
-              <span className="table-cell amount" role="columnheader">
-                AMOUNT
-              </span>
-            </div>
+            <div className="ledger-table" role="table" aria-label="Transaction ledger">
+              <div className="table-row table-header" role="row">
+                <span className="table-cell" role="columnheader">DATE</span>
+                <span className="table-cell" role="columnheader">TYPE</span>
+                <span className="table-cell" role="columnheader">ENTITY</span>
+                <span className="table-cell amount" role="columnheader">
+                  AMOUNT
+                </span>
+              </div>
 
-            {ledgerRows.map((row, index) => {
-              const meta = transactionMeta[row.type];
-              return (
-                <div
-                  className="table-row"
-                  role="row"
-                  key={`${row.time}-${row.entity}`}
-                  data-row-index
-                  style={{ animationDelay: `${index * 120}ms` }}
-                >
-                  <span className="table-cell">{row.time}</span>
-                  <span className="table-cell">
-                    <span className="type-label" style={{ color: meta.textColor, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <meta.icon size={16} strokeWidth={2} />
-                      {meta.label}
+              {ledgerRows.map((row, index) => {
+                const meta = transactionMeta[row.type];
+                return (
+                  <div
+                    className="table-row"
+                    role="row"
+                    key={`${row.time}-${row.entity}`}
+                    data-row-index
+                    style={{ animationDelay: `${index * 120}ms` }}
+                  >
+                    <span className="table-cell" data-label="DATE">{row.time}</span>
+                    <span className="table-cell" data-label="TYPE">
+                      <span className="type-label" style={{ color: meta.textColor, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <meta.icon size={16} strokeWidth={2} />
+                        {meta.label}
+                      </span>
                     </span>
-                  </span>
-                  <span className="table-cell">{row.entity}</span>
-                  <span className={`table-cell amount ${row.tone}`}>{row.amountDisplay}</span>
-                </div>
-              );
-            })}
-          </div>
+                    <span className="table-cell" data-label="ENTITY">{row.entity}</span>
+                    <span className={`table-cell amount ${row.tone}`} data-label="AMOUNT">{row.amountDisplay}</span>
+                  </div>
+                );
+              })}
+            </div>
 
           <nav className="pagination" aria-label="Ledger pagination">
             <button type="button" className="pagination-button" aria-label="Previous page">

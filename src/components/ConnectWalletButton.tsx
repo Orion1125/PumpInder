@@ -2,15 +2,19 @@
 
 import { useState } from 'react';
 import { useWallet } from '@/hooks/useWallet';
+import { useBalance } from '@/hooks/useBalance';
+import { useSocialAuth } from '@/hooks/useSocialAuth';
 import { WalletConnectionModal } from '@/components/WalletConnectionModal';
+import { AuthenticationModal } from '@/components/AuthenticationModal';
+import type { SocialAccount } from '@/types/social';
 
 interface ConnectWalletButtonProps {
-  balance: number;
+  balance?: number; // Optional, will be overridden by real balance
+  onContinueSwiping?: () => void; // Callback for when authentication is complete
 }
 
-export function ConnectWalletButton({ balance }: ConnectWalletButtonProps) {
+export function ConnectWalletButton({ balance: propBalance, onContinueSwiping }: ConnectWalletButtonProps) {
   const { 
-    wallet, 
     isConnected, 
     connectionState, 
     error, 
@@ -18,94 +22,119 @@ export function ConnectWalletButton({ balance }: ConnectWalletButtonProps) {
     connectWallet
   } = useWallet();
   
-  const [showModal, setShowModal] = useState(false);
+  const { pinderBalance, isLoading: isBalanceLoading } = useBalance();
+  const { 
+    linkedAccounts, 
+    connectTwitter, 
+    connectGmail,
+    fetchLinkedAccounts,
+  } = useSocialAuth();
+  
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+
+  // Use real balance if wallet is connected, otherwise use prop balance
+  const displayBalance = isConnected ? pinderBalance : (propBalance && propBalance > 0 ? propBalance : 0);
 
   const handleConnectWallet = async () => {
     await connectWallet();
-    if (isConnected) {
-      setShowModal(false);
-    }
+    await fetchLinkedAccounts();
+    setShowWalletModal(false);
+    setShowAuthModal(true);
   };
 
   const handleCreateWallet = () => {
     // This would typically open a wallet creation flow
     // For now, we'll simulate creating a wallet
     console.log('Create wallet flow would start here');
-    setShowModal(false);
+    setShowWalletModal(false);
   };
 
   const handleRetryConnection = () => {
     handleConnectWallet();
   };
 
-  const handleButtonClick = () => {
-    if (isConnected) {
-      // If connected, navigate to balance page or show wallet details
-      window.location.href = '/balance';
-    } else {
-      setShowModal(true);
+  const handleConnectTwitter = async () => {
+    try {
+      await connectTwitter();
+    } catch (error) {
+      console.error('Failed to connect Twitter:', error);
     }
   };
 
-  // Connected state
-  if (isConnected && wallet) {
-    return (
-      <>
-        <div className="flex items-center gap-4 rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-xs uppercase tracking-[0.35em] text-white/70">
-          <div className="flex items-center gap-2 text-base tracking-normal text-white">
-            <span className="font-bold">{balance.toFixed(2)}</span>
-            <span className="text-sm text-white/60">$PINDER</span>
-          </div>
-          <div className="hidden h-5 w-px bg-white/15 sm:block" />
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-green-400 rounded-full" />
-            <span className="text-[0.65rem] tracking-[0.4em] text-white/50">
-              Wallet Connected
-            </span>
-          </div>
-        </div>
+  const handleConnectGmail = async () => {
+    try {
+      await connectGmail();
+    } catch (error) {
+      console.error('Failed to connect Gmail:', error);
+    }
+  };
 
-        <WalletConnectionModal
-          isOpen={showModal}
-          onClose={() => setShowModal(false)}
-          connectionState={connectionState}
-          error={error}
-          onConnectWallet={handleConnectWallet}
-          onCreateWallet={handleCreateWallet}
-          onRetryConnection={handleRetryConnection}
-          isLoading={isLoading}
-        />
-      </>
-    );
-  }
+  const handleSelectAccount = (account: SocialAccount) => {
+    // Account selected, allow continuing
+    console.log('Selected account:', account);
+    setShowAuthModal(false);
+    onContinueSwiping?.();
+  };
 
-  // Disconnected state - show Connect Wallet button
+  const handleButtonClick = () => {
+    if (!isConnected) {
+      setShowWalletModal(true);
+      return;
+    }
+
+    setShowAuthModal(true);
+  };
   return (
     <>
       <button 
-        className="flex items-center gap-4 rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-xs uppercase tracking-[0.35em] text-white/70 hover:bg-white/10 transition-colors"
+        type="button"
+        className="btn-block flex items-center justify-between gap-4 px-5 py-2.5 text-xs uppercase tracking-[0.35em]"
         onClick={handleButtonClick}
-        disabled={isLoading}
+        disabled={isLoading || isBalanceLoading}
+        aria-label={isConnected ? 'Confirm social account to continue swiping' : 'Connect wallet to continue swiping'}
       >
-        <div className="flex items-center gap-2 text-base tracking-normal text-white">
-          <span className="font-bold">{balance.toFixed(2)}</span>
-          <span className="text-sm text-white/60">$PINDER</span>
+        {displayBalance > 0 && (
+          <div className="flex items-center gap-2 text-base tracking-normal">
+            <span className="font-bold">{displayBalance.toFixed(2)}</span>
+            <span className="text-sm opacity-80">$PINDER</span>
+          </div>
+        )}
+        {displayBalance > 0 && <div className="hidden h-5 w-px bg-white/15 sm:block" />}
+        <div className="flex items-center gap-2">
+          {isConnected ? (
+            <>
+              <div className="w-2 h-2 bg-green-400 rounded-full" />
+              <span className="text-[0.65rem] tracking-[0.4em] opacity-80">
+                Continue Swiping
+              </span>
+            </>
+          ) : (
+            <span className="text-[0.65rem] tracking-[0.4em] text-white">
+              {isLoading || isBalanceLoading ? 'Loading…' : 'Connect Wallet'}
+            </span>
+          )}
         </div>
-        <div className="hidden h-5 w-px bg-white/15 sm:block" />
-        <span className="text-[0.65rem] tracking-[0.4em] text-white/50">
-          {isLoading ? 'Connecting...' : 'Connect Wallet'}
-        </span>
       </button>
 
       <WalletConnectionModal
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
+        isOpen={showWalletModal}
+        onClose={() => setShowWalletModal(false)}
         connectionState={connectionState}
         error={error}
         onConnectWallet={handleConnectWallet}
         onCreateWallet={handleCreateWallet}
         onRetryConnection={handleRetryConnection}
         isLoading={isLoading}
+      />
+
+      <AuthenticationModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        linkedAccounts={linkedAccounts}
+        onConnectTwitter={handleConnectTwitter}
+        onConnectGmail={handleConnectGmail}
+        onSelectAccount={handleSelectAccount}
       />
     </>
   );

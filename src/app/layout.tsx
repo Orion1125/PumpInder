@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { JetBrains_Mono } from "next/font/google";
+import { Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { AppProviders } from "@/components/providers/AppProviders";
 import { Toolbar } from "@/components/Toolbar";
@@ -19,6 +20,13 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
+const spaceGrotesk = Space_Grotesk({
+  variable: "--font-space-grotesk",
+  weight: ["300", "400", "500", "600", "700"],
+  subsets: ["latin"],
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "PumpInder",
   description: "Pumpfun-style Tinder experience powered by PINDER tokens.",
@@ -32,7 +40,7 @@ export default function RootLayout({
 }>) {
   return (
     <html>
-      <body className={`${clashDisplay.variable} ${jetbrainsMono.variable} antialiased`}>
+      <body className={`${clashDisplay.variable} ${jetbrainsMono.variable} ${spaceGrotesk.variable} antialiased`}>
         <AppProviders>
           {children}
           <Toolbar />

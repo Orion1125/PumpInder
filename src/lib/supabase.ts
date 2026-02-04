@@ -43,6 +43,49 @@ export interface Database {
           updated_at?: string
         }
       }
+      social_accounts: {
+        Row: {
+          id: string
+          wallet_public_key: string
+          provider: 'twitter' | 'gmail'
+          provider_user_id: string | null
+          handle: string | null
+          email: string | null
+          access_token: string | null
+          refresh_token: string | null
+          token_expires_at: string | null
+          verified: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          wallet_public_key: string
+          provider: 'twitter' | 'gmail'
+          provider_user_id?: string | null
+          handle?: string | null
+          email?: string | null
+          access_token?: string | null
+          refresh_token?: string | null
+          token_expires_at?: string | null
+          verified?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          wallet_public_key?: string
+          provider?: 'twitter' | 'gmail'
+          provider_user_id?: string | null
+          handle?: string | null
+          email?: string | null
+          access_token?: string | null
+          refresh_token?: string | null
+          token_expires_at?: string | null
+          verified?: boolean
+          updated_at?: string
+        }
+      }
       chat_threads: {
         Row: {
           id: string

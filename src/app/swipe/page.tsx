@@ -16,6 +16,7 @@ import {
 import { AppHeader } from '@/components/AppHeader';
 import { useFeePaymentModal } from '@/components/FeePaymentModal';
 import { useWallet } from '@/hooks/useWallet';
+import { useSocialAuth } from '@/hooks/useSocialAuth';
 import { useSwipe } from '@/hooks/useSwipe';
 
 const ONBOARDING_STORAGE_KEY = 'pinder_onboarding_payload';
@@ -206,9 +207,19 @@ export default function SwipePage() {
   const [isBoosting, setIsBoosting] = useState(false);
 
   const { Modal, initiatePayment } = useFeePaymentModal();
-  const { } = useWallet();
+  const { isConnected } = useWallet();
+  const { hasLinkedAccount } = useSocialAuth();
 
   const userProfile = loadUserProfile();
+  
+  // Check if user can continue swiping
+  const canContinueSwiping = isConnected && hasLinkedAccount;
+  
+  const handleContinueSwiping = () => {
+    // This callback is called when authentication is complete
+    // The swipe functionality will work normally once authenticated
+    console.log('Authentication complete, user can continue swiping');
+  };
   
   const dynamicProfileDeck = useMemo(() => {
     if (userProfile) {
@@ -257,6 +268,13 @@ export default function SwipePage() {
 
   const advanceCard = (direction: CardAnimation) => {
     if (cardAnimation) return;
+    
+    // Check if user is authenticated before allowing swipe
+    if (!canContinueSwiping) {
+      // The ConnectWalletButton will handle showing the authentication modal
+      return;
+    }
+    
     setCardAnimation(direction);
     setTimeout(() => {
       setActiveIndex((prev) => (prev + 1) % dynamicProfileDeck.length);
@@ -266,6 +284,12 @@ export default function SwipePage() {
 
   const handleBoost = async () => {
     if (isBoosting) return;
+    
+    // Check if user is authenticated before allowing boost
+    if (!canContinueSwiping) {
+      return;
+    }
+    
     setIsBoosting(true);
     
     // Initiate payment for SUPERLIKE
@@ -273,6 +297,11 @@ export default function SwipePage() {
   };
 
   const handleLike = async () => {
+    // Check if user is authenticated before allowing like
+    if (!canContinueSwiping) {
+      return;
+    }
+    
     // Initiate payment for LIKE
     await initiatePayment('LIKE');
   };
@@ -320,7 +349,7 @@ export default function SwipePage() {
 
   return (
     <div className="swipe-page">
-      <AppHeader activePage="swipe" balance={100.00} />
+      <AppHeader activePage="swipe" onContinueSwiping={handleContinueSwiping} />
 
       <main className="swipe-grid">
         <section className="filters-panel" aria-labelledby="filters-heading">
