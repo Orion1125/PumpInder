@@ -39,7 +39,7 @@ export default function LoginMethodsModal({ isOpen, onClose }: LoginMethodsModal
     connectGmailMock,
     removeSocialAccount,
     error
-  } = useSocialAuth();
+  } = useSocialAuth(); // Uses wallet from useWallet hook by default
   
   const [isConnecting, setIsConnecting] = useState<LinkedProvider>(null);
   const [localError, setLocalError] = useState<string | null>(null);

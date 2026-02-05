@@ -113,12 +113,9 @@ const defaultState: OnboardingState = {
 export default function OnboardingPage() {
   const router = useRouter();
   const { createWallet, saveWallet } = useWallet();
-  const [tempWallet, setTempWallet] = useState<string | null>(null);
   
-  // Use social auth with temporary wallet during onboarding
-  const { connectTwitter, connectGmail, connectTwitterMock, connectGmailMock } = useSocialAuth(
-    tempWallet ? { walletOverride: tempWallet, isConnectedOverride: true } : undefined
-  );
+  // Use social auth - it will handle temporary wallet generation internally
+  const { connectTwitter, connectGmail, connectTwitterMock, connectGmailMock } = useSocialAuth();
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [form, setForm] = useState<OnboardingState>(defaultState);
   const [showWalletModal, setShowWalletModal] = useState(false);
@@ -314,18 +311,7 @@ export default function OnboardingPage() {
       setShowRetryOptions(false);
       
       try {
-        // Check if we have a wallet generated first
-        let currentWallet = tempWallet;
-        if (!currentWallet) {
-          // Generate a temporary wallet for social linking
-          const mnemonic = generateMnemonic();
-          const newTempWallet = createWallet(mnemonic);
-          setTempWallet(newTempWallet.publicKey);
-          setWalletInfo(newTempWallet);
-          currentWallet = newTempWallet.publicKey;
-        }
-        
-        // Attempt real OAuth connection
+        // Attempt real OAuth connection - the hook will generate a temporary wallet if needed
         if (provider === 'x') {
           await connectTwitter();
         } else {
@@ -360,7 +346,7 @@ export default function OnboardingPage() {
         setIsConnectingSocial(null);
       }
     },
-    [tempWallet, createWallet, connectTwitter, connectGmail, connectTwitterMock, connectGmailMock, handleRecoveryComplete]
+    [connectTwitter, connectGmail, connectTwitterMock, connectGmailMock, handleRecoveryComplete]
   );
 
   const updateField = (field: StepId, value: string) => {

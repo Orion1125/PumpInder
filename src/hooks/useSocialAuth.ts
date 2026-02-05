@@ -1,7 +1,6 @@
-'use client';
-
 import { useState, useEffect, useCallback } from 'react';
 import { useWallet } from './useWallet';
+import { generateMnemonic } from 'bip39';
 import type { SocialAccount } from '@/types/social';
 
 interface UseSocialAuthOptions {
@@ -10,7 +9,7 @@ interface UseSocialAuthOptions {
 }
 
 export function useSocialAuth(options?: UseSocialAuthOptions) {
-  const { wallet: walletFromHook, isConnected: isConnectedFromHook } = useWallet();
+  const { wallet: walletFromHook, isConnected: isConnectedFromHook, createWallet: createWalletFromHook } = useWallet();
   
   // Use provided wallet or fall back to wallet from hook
   const wallet = options?.walletOverride ?? walletFromHook;
@@ -22,7 +21,8 @@ export function useSocialAuth(options?: UseSocialAuthOptions) {
 
   // Fetch user's linked social accounts
   const fetchLinkedAccounts = useCallback(async () => {
-    if (!isConnected || !wallet) {
+    // If no wallet is provided, we can't fetch accounts
+    if (!wallet) {
       setLinkedAccounts([]);
       return;
     }
@@ -46,20 +46,24 @@ export function useSocialAuth(options?: UseSocialAuthOptions) {
     } finally {
       setIsLoading(false);
     }
-  }, [isConnected, wallet]);
+  }, [wallet]);
 
   // Connect Twitter account with real OAuth
   const connectTwitter = async () => {
-    if (!wallet) {
-      const error = new Error('Wallet required for Twitter connection');
-      setError('Wallet is required to link Twitter account');
-      throw error;
+    // If no wallet is provided, generate a temporary one
+    let walletToUse = wallet;
+    if (!walletToUse) {
+      try {
+        const mnemonic = generateMnemonic();
+        const tempWallet = createWalletFromHook(mnemonic);
+        walletToUse = tempWallet.publicKey;
+      } catch (err) {
+        const error = new Error('Failed to prepare connection');
+        setError('Unable to initialize connection. Please try again.');
+        throw error;
+      }
     }
     
-    // Set loading state even if not technically connected
-    setIsLoading(true);
-    setError(null);
-
     setIsLoading(true);
     setError(null);
 
@@ -69,7 +73,7 @@ export function useSocialAuth(options?: UseSocialAuthOptions) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ wallet, action: 'connect' }),
+        body: JSON.stringify({ wallet: walletToUse, action: 'connect' }),
       });
 
       if (!response.ok) {
@@ -101,16 +105,20 @@ export function useSocialAuth(options?: UseSocialAuthOptions) {
 
   // Connect Gmail account with real OAuth
   const connectGmail = async () => {
-    if (!wallet) {
-      const error = new Error('Wallet required for Gmail connection');
-      setError('Wallet is required to link Gmail account');
-      throw error;
+    // If no wallet is provided, generate a temporary one
+    let walletToUse = wallet;
+    if (!walletToUse) {
+      try {
+        const mnemonic = generateMnemonic();
+        const tempWallet = createWalletFromHook(mnemonic);
+        walletToUse = tempWallet.publicKey;
+      } catch (err) {
+        const error = new Error('Failed to prepare connection');
+        setError('Unable to initialize connection. Please try again.');
+        throw error;
+      }
     }
     
-    // Set loading state even if not technically connected
-    setIsLoading(true);
-    setError(null);
-
     setIsLoading(true);
     setError(null);
 
@@ -120,7 +128,7 @@ export function useSocialAuth(options?: UseSocialAuthOptions) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ wallet, action: 'connect' }),
+        body: JSON.stringify({ wallet: walletToUse, action: 'connect' }),
       });
 
       if (!response.ok) {
@@ -157,7 +165,7 @@ export function useSocialAuth(options?: UseSocialAuthOptions) {
         return `${provider} OAuth is not properly configured. Please contact support or try again later.`;
       }
       if (error.message.includes('wallet')) {
-        return 'Wallet connection required. Please connect your wallet first.';
+        return 'Wallet connection is not required for this operation.';
       }
       if (error.message.includes('network') || error.message.includes('fetch')) {
         return `Network error connecting to ${provider}. Please check your internet connection and try again.`;
@@ -172,16 +180,20 @@ export function useSocialAuth(options?: UseSocialAuthOptions) {
 
   // Mock connection for testing (fallback)
   const connectTwitterMock = async () => {
-    if (!wallet) {
-      const error = new Error('Wallet required for Twitter connection');
-      setError('Wallet is required to link Twitter account');
-      throw error;
+    // If no wallet is provided, generate a temporary one
+    let walletToUse = wallet;
+    if (!walletToUse) {
+      try {
+        const mnemonic = generateMnemonic();
+        const tempWallet = createWalletFromHook(mnemonic);
+        walletToUse = tempWallet.publicKey;
+      } catch (err) {
+        const error = new Error('Failed to prepare connection');
+        setError('Unable to initialize connection. Please try again.');
+        throw error;
+      }
     }
     
-    // Set loading state even if not technically connected
-    setIsLoading(true);
-    setError(null);
-
     setIsLoading(true);
     setError(null);
 
@@ -191,7 +203,7 @@ export function useSocialAuth(options?: UseSocialAuthOptions) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ wallet, action: 'mock' }),
+        body: JSON.stringify({ wallet: walletToUse, action: 'mock' }),
       });
 
       if (!response.ok) {
@@ -214,16 +226,20 @@ export function useSocialAuth(options?: UseSocialAuthOptions) {
   };
 
   const connectGmailMock = async () => {
-    if (!wallet) {
-      const error = new Error('Wallet required for Gmail connection');
-      setError('Wallet is required to link Gmail account');
-      throw error;
+    // If no wallet is provided, generate a temporary one
+    let walletToUse = wallet;
+    if (!walletToUse) {
+      try {
+        const mnemonic = generateMnemonic();
+        const tempWallet = createWalletFromHook(mnemonic);
+        walletToUse = tempWallet.publicKey;
+      } catch (err) {
+        const error = new Error('Failed to prepare connection');
+        setError('Unable to initialize connection. Please try again.');
+        throw error;
+      }
     }
     
-    // Set loading state even if not technically connected
-    setIsLoading(true);
-    setError(null);
-
     setIsLoading(true);
     setError(null);
 
@@ -233,7 +249,7 @@ export function useSocialAuth(options?: UseSocialAuthOptions) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ wallet, action: 'mock' }),
+        body: JSON.stringify({ wallet: walletToUse, action: 'mock' }),
       });
 
       if (!response.ok) {
@@ -257,8 +273,11 @@ export function useSocialAuth(options?: UseSocialAuthOptions) {
 
   // Remove social account
   const removeSocialAccount = async (provider: 'twitter' | 'gmail') => {
-    if (!isConnected || !wallet) {
-      throw new Error('Wallet not connected');
+    // If no wallet is provided, this operation cannot be performed
+    if (!wallet) {
+      const error = new Error('Wallet required for account removal');
+      setError('Wallet is required to remove social account');
+      throw error;
     }
 
     setIsLoading(true);
@@ -297,12 +316,12 @@ export function useSocialAuth(options?: UseSocialAuthOptions) {
 
   // Fetch accounts when wallet connects
   useEffect(() => {
-    if (isConnected && wallet) {
+    if (wallet) {
       fetchLinkedAccounts();
     } else {
       setLinkedAccounts([]);
     }
-  }, [isConnected, wallet, fetchLinkedAccounts]);
+  }, [wallet, fetchLinkedAccounts]);
 
   return {
     linkedAccounts,
