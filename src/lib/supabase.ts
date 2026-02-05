@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js'
-
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 // Create a mock client for build time when env vars are not available
@@ -25,7 +24,12 @@ function createSupabaseClient() {
     return createMockClient();
   }
   
-  return createClient(supabaseUrl, supabaseAnonKey);
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+    },
+  });
 }
 
 // Export the Supabase client

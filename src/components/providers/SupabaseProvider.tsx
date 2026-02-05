@@ -1,11 +1,12 @@
 'use client';
 
 import { ReactNode } from 'react';
+import { AuthProvider } from '@/contexts/AuthContext';
 
-/**
- * Placeholder Supabase provider so we can wire the real client later
- * without refactoring the component tree.
- */
 export function SupabaseProvider({ children }: { children: ReactNode }) {
-  return <>{children}</>;
+  return (
+    <AuthProvider>
+      {children}
+    </AuthProvider>
+  );
 }

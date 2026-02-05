@@ -1,70 +1,52 @@
 'use client';
 
 import { useState } from 'react';
-import { X, Twitter, Mail, Check, AlertCircle } from 'lucide-react';
-import type { SocialAccount } from '@/types/social';
+import { X, Twitter } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface AuthenticationModalProps {
   isOpen: boolean;
   onClose: () => void;
-  linkedAccounts: SocialAccount[];
-  onConnectTwitter: () => void;
-  onConnectGmail: () => void;
-  onSelectAccount: (account: SocialAccount) => void;
 }
 
 export function AuthenticationModal({
   isOpen,
   onClose,
-  linkedAccounts,
-  onConnectTwitter,
-  onConnectGmail,
-  onSelectAccount,
 }: AuthenticationModalProps) {
-  const [selectedAccount, setSelectedAccount] = useState<SocialAccount | null>(null);
-  const [isConnecting, setIsConnecting] = useState<'twitter' | 'gmail' | null>(null);
-
-  const hasLinkedAccounts = linkedAccounts.length > 0;
+  const [isConnecting, setIsConnecting] = useState<'twitter' | 'google' | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const { signInWithGoogle, signInWithTwitter } = useAuth();
 
   const handleConnectTwitter = async () => {
     setIsConnecting('twitter');
+    setError(null);
+    
     try {
-      await onConnectTwitter();
+      const { error } = await signInWithTwitter();
+      if (error) {
+        setError('Failed to connect Twitter. Please try again.');
+      }
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.');
     } finally {
       setIsConnecting(null);
     }
   };
 
-  const handleConnectGmail = async () => {
-    setIsConnecting('gmail');
+  const handleConnectGoogle = async () => {
+    setIsConnecting('google');
+    setError(null);
+    
     try {
-      await onConnectGmail();
+      const { error } = await signInWithGoogle();
+      if (error) {
+        setError('Failed to connect Google. Please try again.');
+      }
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.');
     } finally {
       setIsConnecting(null);
     }
-  };
-
-  const handleSelectAccount = (account: SocialAccount) => {
-    setSelectedAccount(account);
-  };
-
-  const handleConfirmSelection = () => {
-    if (selectedAccount) {
-      onSelectAccount(selectedAccount);
-      onClose();
-    }
-  };
-
-  const getAccountIcon = (type: 'twitter' | 'gmail') => {
-    return type === 'twitter' ? (
-      <Twitter className="w-5 h-5" />
-    ) : (
-      <Mail className="w-5 h-5" />
-    );
-  };
-
-  const getAccountColor = (type: 'twitter' | 'gmail') => {
-    return type === 'twitter' ? 'bg-blue-500' : 'bg-red-500';
   };
 
   if (!isOpen) return null;
@@ -75,7 +57,7 @@ export function AuthenticationModal({
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-white">
-            Connect Account to Continue
+            Connect to PumpInder
           </h2>
           <button
             onClick={onClose}
@@ -86,113 +68,60 @@ export function AuthenticationModal({
         </div>
 
         {/* Content */}
-        {!hasLinkedAccounts ? (
-          <div className="space-y-6">
-            {/* No accounts message */}
-            <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-yellow-500 mt-0.5" />
-                <div>
-                  <p className="text-white text-sm">
-                    You haven&apos;t linked a Twitter or Gmail account yet. Please connect one to continue swiping.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Connect options */}
-            <div className="space-y-3">
-              <button
-                onClick={handleConnectTwitter}
-                disabled={isConnecting !== null}
-                className="w-full flex items-center justify-center gap-3 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-500/50 disabled:cursor-not-allowed text-white rounded-lg px-4 py-3 transition-colors"
-              >
-                <Twitter className="w-5 h-5" />
-                {isConnecting === 'twitter' ? 'Connecting...' : 'Connect Twitter'}
-              </button>
-
-              <button
-                onClick={handleConnectGmail}
-                disabled={isConnecting !== null}
-                className="w-full flex items-center justify-center gap-3 bg-red-500 hover:bg-red-600 disabled:bg-red-500/50 disabled:cursor-not-allowed text-white rounded-lg px-4 py-3 transition-colors"
-              >
-                <Mail className="w-5 h-5" />
-                {isConnecting === 'gmail' ? 'Connecting...' : 'Connect Gmail'}
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {/* Instructions */}
+        <div className="space-y-6">
+          {/* Description */}
+          <div className="text-center space-y-2">
             <p className="text-white/70 text-sm">
-              Select one of your linked accounts to continue swiping:
+              Choose a social account to sign in. No wallet required.
             </p>
-
-            {/* Linked accounts */}
-            <div className="space-y-3">
-              {linkedAccounts.map((account) => (
-                <button
-                  key={`${account.provider}-${account.handle}`}
-                  onClick={() => handleSelectAccount(account)}
-                  className={`w-full flex items-center justify-between p-4 rounded-lg border transition-colors ${
-                    selectedAccount?.provider === account.provider && selectedAccount?.handle === account.handle
-                      ? 'bg-white/10 border-white/30'
-                      : 'bg-white/5 border-white/10 hover:bg-white/10'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${getAccountColor(account.provider)}/20`}>
-                      <div className={getAccountColor(account.provider)}>
-                        {getAccountIcon(account.provider)}
-                      </div>
-                    </div>
-                    <div className="text-left">
-                      <p className="text-white font-medium capitalize">{account.provider}</p>
-                      <p className="text-white/60 text-sm">{account.handle}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {account.verified && (
-                      <div className="bg-green-500/20 p-1 rounded-full">
-                        <Check className="w-3 h-3 text-green-500" />
-                      </div>
-                    )}
-                    <div
-                      className={`w-4 h-4 rounded-full border-2 transition-colors ${
-                        selectedAccount?.provider === account.provider && selectedAccount?.handle === account.handle
-                          ? 'bg-white border-white'
-                          : 'border-white/30'
-                      }`}
-                    >
-                      {selectedAccount?.provider === account.provider && selectedAccount?.handle === account.handle && (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Check className="w-2.5 h-2.5 text-gray-900" />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-
-            {/* Action buttons */}
-            <div className="flex gap-3">
-              <button
-                onClick={onClose}
-                className="flex-1 px-4 py-3 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmSelection}
-                disabled={!selectedAccount}
-                className="flex-1 px-4 py-3 bg-white hover:bg-white/90 disabled:bg-white/50 disabled:cursor-not-allowed text-gray-900 rounded-lg font-medium transition-colors"
-              >
-                Continue
-              </button>
-            </div>
+            <p className="text-white/50 text-xs">
+              We only use this for authentication. You can create a wallet later for on-chain actions.
+            </p>
           </div>
-        )}
+
+          {/* Error Message */}
+          {error && (
+            <div className="bg-red-500/20 border border-red-500/20 rounded-lg p-3">
+              <p className="text-red-400 text-sm">{error}</p>
+            </div>
+          )}
+
+          {/* Connect options */}
+          <div className="space-y-3">
+            <button
+              onClick={handleConnectGoogle}
+              disabled={isConnecting !== null}
+              className="w-full flex items-center justify-center gap-3 bg-white hover:bg-white/90 disabled:bg-white/50 disabled:cursor-not-allowed text-gray-900 rounded-lg px-4 py-3 transition-colors"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" className="w-5 h-5">
+                <path
+                  fill="#4285F4"
+                  d="M21.35 11.1H12v3.78h5.35c-.24 1.18-1.4 3.47-5.35 3.47-3.23 0-5.85-2.65-5.85-5.9s2.62-5.9 5.85-5.9c1.85 0 3.09.79 3.8 1.45l2.59-2.49C16.57 3.75 14.46 2.9 12 2.9 6.98 2.9 2.9 6.98 2.9 12s4.08 9.1 9.1 9.1c5.21 0 8.63-3.65 8.63-8.78 0-.5-.09-1.07-.28-1.22Z"
+                />
+                <path fill="#34A853" d="M12 22c2.43 0 4.48-.8 5.97-2.17l-2.83-2.19c-.79.55-1.8.89-3.14.89-2.41 0-4.45-1.62-5.18-3.8H3.9v2.39C5.39 19.92 8.43 22 12 22Z" />
+                <path fill="#FBBC05" d="M6.82 14.73c-.19-.59-.3-1.21-.3-1.86 0-.65.11-1.27.3-1.86V8.62H3.9A9.09 9.09 0 0 0 3 12c0 1.18.21 2.31.9 3.38z" />
+                <path fill="#EA4335" d="M12 7.37c1.32 0 2.35.45 3.07 1.04l2.3-2.24C16.47 4.96 14.43 4 12 4 8.43 4 5.39 6.08 3.9 9.27l2.92 2.34C7.55 8.99 9.59 7.37 12 7.37Z" />
+              </svg>
+              {isConnecting === 'google' ? 'Connecting...' : 'Continue with Google'}
+            </button>
+
+            <button
+              onClick={handleConnectTwitter}
+              disabled={isConnecting !== null}
+              className="w-full flex items-center justify-center gap-3 bg-black hover:bg-black/80 disabled:bg-black/50 disabled:cursor-not-allowed text-white rounded-lg px-4 py-3 transition-colors"
+            >
+              <Twitter className="w-5 h-5" />
+              {isConnecting === 'twitter' ? 'Connecting...' : 'Continue with X (Twitter)'}
+            </button>
+          </div>
+
+          {/* Terms */}
+          <div className="text-center">
+            <p className="text-white/50 text-xs">
+              By continuing, you agree to our Terms of Service and Privacy Policy.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

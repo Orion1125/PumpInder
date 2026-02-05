@@ -1,14 +1,17 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { FormEvent } from 'react';
+import { useState, useEffect, useMemo, useCallback, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { generateMnemonic } from 'bip39';
-import { useWallet, type WalletInfo } from '@/hooks/useWallet';
+import { useWallet, WalletInfo } from '@/hooks/useWallet';
 import { useSocialAuth } from '@/hooks/useSocialAuth';
-import { encryptPhrase, storePhraseBackup, hasPhraseBackup } from '@/utils/phraseVault';
-import { TrendingUp, Palette, Gamepad2, BarChart3, Smile, Wrench, Music, CameraIcon, Book, Heart, Coffee, Pizza, Plane, TreePine, Dumbbell, Film, PenTool, Globe, Zap, Moon, Sun, Cloud, Star, Flower, Cat, Dog, Bird, Fish, Twitter } from 'lucide-react';
+import { hasPhraseBackup, encryptPhrase, storePhraseBackup } from '@/utils/phraseVault';
+import { generateMnemonic } from 'bip39';
+import { 
+  TrendingUp, Palette, Gamepad2, BarChart3, Smile, Wrench,
+  Music, CameraIcon, Book, Dumbbell, Plane, TreePine, Coffee, Pizza, Film, PenTool,
+  Zap, Star, Cat, Dog, Bird, Fish, Flower, Cloud, Sun, Moon, Globe, Twitter, Heart
+} from 'lucide-react';
 
 const HANDLE_STORAGE_KEY = 'pinder_handle';
 const ONBOARDING_STORAGE_KEY = 'pinder_onboarding_payload';

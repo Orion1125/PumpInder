@@ -131,10 +131,6 @@ export function ConnectWalletButton({ balance: propBalance, onContinueSwiping }:
       <AuthenticationModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
-        linkedAccounts={linkedAccounts}
-        onConnectTwitter={handleConnectTwitter}
-        onConnectGmail={handleConnectGmail}
-        onSelectAccount={handleSelectAccount}
       />
     </>
   );
