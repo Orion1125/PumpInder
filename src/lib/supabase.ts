@@ -11,6 +11,12 @@ function createMockClient() {
       update: () => ({ data: null, error: null }),
       delete: () => ({ data: null, error: null }),
     }),
+    auth: {
+      getSession: () => ({ data: { session: null }, error: null }),
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+      signInWithOAuth: () => ({ error: new Error('Supabase not configured') }),
+      signOut: () => ({ error: new Error('Supabase not configured') }),
+    },
   } as unknown as SupabaseClient;
 }
 

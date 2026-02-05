@@ -115,6 +115,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
+        // Check if supabase auth is available
+        if (!supabase?.auth) {
+          console.warn('Supabase auth not available');
+          setIsLoading(false);
+          return;
+        }
+
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
@@ -141,35 +148,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initializeAuth();
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.id);
-        
-        if (session) {
-          setUser(session.user);
-          setSession(session);
-          setIsAuthenticated(true);
+    if (supabase?.auth) {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        async (event, session) => {
+          console.log('Auth state changed:', event, session?.user?.id);
           
-          await fetchProfile(session.user.id);
-          await fetchSocialAccounts(session.user.id);
-        } else {
-          setUser(null);
-          setSession(null);
-          setIsAuthenticated(false);
-          setHasCompletedProfile(false);
-          setHasWallet(false);
-          setProfile(null);
-          setSocialAccounts([]);
+          if (session) {
+            setUser(session.user);
+            setSession(session);
+            setIsAuthenticated(true);
+            
+            await fetchProfile(session.user.id);
+            await fetchSocialAccounts(session.user.id);
+          } else {
+            setUser(null);
+            setSession(null);
+            setIsAuthenticated(false);
+            setHasCompletedProfile(false);
+            setHasWallet(false);
+            setProfile(null);
+            setSocialAccounts([]);
+          }
         }
-      }
-    );
+      );
 
-    return () => subscription.unsubscribe();
+      return () => subscription.unsubscribe();
+    }
+
+    return () => {};
   }, []);
 
   // Social login functions
   const signInWithGoogle = async () => {
     try {
+      if (!supabase?.auth) {
+        return { error: { message: 'Supabase auth not available' } as AuthError };
+      }
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -186,6 +201,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithTwitter = async () => {
     try {
+      if (!supabase?.auth) {
+        return { error: { message: 'Supabase auth not available' } as AuthError };
+      }
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'twitter',
         options: {
@@ -202,6 +221,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     try {
+      if (!supabase?.auth) {
+        return { error: { message: 'Supabase auth not available' } as AuthError };
+      }
+      
       const { error } = await supabase.auth.signOut();
       return { error };
     } catch (error) {
