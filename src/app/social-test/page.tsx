@@ -14,8 +14,6 @@ export default function SocialAuthTest() {
     isProviderConnected,
     connectTwitter,
     connectGmail,
-    connectTwitterMock,
-    connectGmailMock,
     removeSocialAccount,
     fetchLinkedAccounts
   } = useSocialAuth();
@@ -45,23 +43,6 @@ export default function SocialAuthTest() {
     }
   };
 
-  const handleMockTwitter = async () => {
-    try {
-      const result = await connectTwitterMock();
-      setTestResult(`Mock Twitter connected: ${JSON.stringify(result)}`);
-    } catch (err) {
-      setTestResult(`Mock Twitter failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
-    }
-  };
-
-  const handleMockGmail = async () => {
-    try {
-      const result = await connectGmailMock();
-      setTestResult(`Mock Gmail connected: ${JSON.stringify(result)}`);
-    } catch (err) {
-      setTestResult(`Mock Gmail failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
-    }
-  };
 
   const handleRemoveTwitter = async () => {
     try {
@@ -98,7 +79,6 @@ export default function SocialAuthTest() {
             <li>GMAIL_CLIENT_ID (optional)</li>
             <li>GMAIL_CLIENT_SECRET (optional)</li>
           </ul>
-          <p className="mt-2">Without these, the app will use mock functionality for testing.</p>
         </div>
       )}
       
@@ -157,22 +137,6 @@ export default function SocialAuthTest() {
                 className="bg-red-500 hover:bg-red-600 disabled:bg-gray-400 text-white px-4 py-2 rounded"
               >
                 Connect Gmail (Real OAuth)
-              </button>
-              
-              <button
-                onClick={handleMockTwitter}
-                disabled={isLoading}
-                className="bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white px-4 py-2 rounded"
-              >
-                Connect Twitter (Mock)
-              </button>
-              
-              <button
-                onClick={handleMockGmail}
-                disabled={isLoading}
-                className="bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white px-4 py-2 rounded"
-              >
-                Connect Gmail (Mock)
               </button>
               
               <button

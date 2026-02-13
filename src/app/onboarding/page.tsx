@@ -118,7 +118,7 @@ export default function OnboardingPage() {
   const { createWallet, saveWallet } = useWallet();
   
   // Use social auth - it will handle temporary wallet generation internally
-  const { connectTwitter, connectGmail, connectTwitterMock, connectGmailMock } = useSocialAuth();
+  const { connectTwitter, connectGmail } = useSocialAuth();
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [form, setForm] = useState<OnboardingState>(defaultState);
   const [showWalletModal, setShowWalletModal] = useState(false);
@@ -336,28 +336,11 @@ export default function OnboardingPage() {
         const errorMessage = error instanceof Error ? error.message : `Failed to connect ${provider}`;
         setSocialConnectionError(errorMessage);
         setShowRetryOptions(true);
-        
-        // Fallback to mock connection for testing
-        try {
-          if (provider === 'x') {
-            await connectTwitterMock();
-          } else {
-            await connectGmailMock();
-          }
-          // On successful mock connection, proceed to wallet creation
-          handleRecoveryComplete(provider);
-          setShowRetryOptions(false);
-        } catch (mockError) {
-          console.error(`Mock connection failed for ${provider}:`, mockError);
-          const mockErrorMessage = mockError instanceof Error ? mockError.message : `Unable to connect ${provider}`;
-          setSocialConnectionError(mockErrorMessage);
-          setShowRetryOptions(true);
-        }
       } finally {
         setIsConnectingSocial(null);
       }
     },
-    [connectTwitter, connectGmail, connectTwitterMock, connectGmailMock, handleRecoveryComplete]
+    [connectTwitter, connectGmail]
   );
 
   const updateField = (field: StepId, value: string) => {

@@ -35,8 +35,6 @@ export default function LoginMethodsModal({ isOpen, onClose }: LoginMethodsModal
     linkedAccounts: socialAccounts, 
     connectTwitter, 
     connectGmail, 
-    connectTwitterMock, 
-    connectGmailMock,
     removeSocialAccount,
     error
   } = useSocialAuth(); // Uses wallet from useWallet hook by default
@@ -74,23 +72,12 @@ export default function LoginMethodsModal({ isOpen, onClose }: LoginMethodsModal
       // The user will be redirected back after OAuth completion
     } catch (error) {
       console.error(`Error connecting ${provider}:`, error);
-      
-      // Fallback to mock connection for testing
-      try {
-        if (provider === 'x') {
-          await connectTwitterMock();
-        } else {
-          await connectGmailMock();
-        }
-      } catch (mockError) {
-        console.error(`Mock connection failed for ${provider}:`, mockError);
-        const errorMessage = mockError instanceof Error ? mockError.message : `Failed to connect ${provider}`;
-        setLocalError(errorMessage);
-      }
+      const errorMessage = error instanceof Error ? error.message : `Failed to connect ${provider}`;
+      setLocalError(errorMessage);
     } finally {
       setIsConnecting(null);
     }
-  }, [connectTwitter, connectGmail, connectTwitterMock, connectGmailMock]);
+  }, [connectTwitter, connectGmail]);
 
   const handleDisconnect = useCallback(async (provider: LinkedProvider) => {
     if (!provider) return;

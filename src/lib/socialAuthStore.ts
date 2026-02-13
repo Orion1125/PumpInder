@@ -32,24 +32,10 @@ export async function listSocialAccounts(wallet: string): Promise<SocialAccount[
 
 // Upsert social account in Supabase
 export async function upsertSocialAccount(wallet: string, account: SocialAccountInsert): Promise<SocialAccount | null> {
-  // Fallback to in-memory store if Supabase is not configured
+  // Require a configured backend for social account persistence
   if (!isSupabaseConfigured()) {
-    console.warn('Supabase not configured, using fallback storage');
-    // Return a mock account for testing
-    return {
-      id: Math.random().toString(36).substring(7),
-      wallet_public_key: wallet,
-      provider: account.provider,
-      provider_user_id: account.provider_user_id,
-      handle: account.handle,
-      email: account.email,
-      access_token: account.access_token,
-      refresh_token: account.refresh_token,
-      token_expires_at: account.token_expires_at,
-      verified: account.verified ?? false,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
+    console.warn('Supabase not configured, cannot persist social accounts');
+    return null;
   }
 
   try {
@@ -80,10 +66,10 @@ export async function upsertSocialAccount(wallet: string, account: SocialAccount
 
 // Remove social account from Supabase
 export async function removeSocialAccount(wallet: string, provider: SocialProvider): Promise<boolean> {
-  // Fallback to in-memory store if Supabase is not configured
+  // Require a configured backend for social account removal
   if (!isSupabaseConfigured()) {
-    console.warn('Supabase not configured, using fallback storage');
-    return true; // Simulate success
+    console.warn('Supabase not configured, cannot remove social accounts');
+    return false;
   }
 
   try {

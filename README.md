@@ -84,13 +84,6 @@ GMAIL_CLIENT_SECRET=your_gmail_client_secret
 5. Set authorized redirect URI to: `http://localhost:3000/api/social-connect/gmail/callback`
 6. Copy the Client ID and Client Secret to your environment variables
 
-## Testing Social Authentication
-
-For development and testing purposes, you can use the mock authentication endpoints:
-
-- Twitter: `/api/social-connect/twitter` with `{ "wallet": "your_wallet", "action": "mock" }`
-- Gmail: `/api/social-connect/gmail` with `{ "wallet": "your_wallet", "action": "mock" }`
-
 ## Project Structure
 
 ```

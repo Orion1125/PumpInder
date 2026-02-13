@@ -1,50 +1,47 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { upsertSocialAccount } from '@/lib/socialAuthStore';
-import crypto from 'crypto';
 
-// Check if Gmail OAuth is properly configured
-function isGmailConfigured(): boolean {
-  return !!(process.env.GMAIL_CLIENT_ID && process.env.GMAIL_CLIENT_SECRET && process.env.NEXT_PUBLIC_BASE_URL);
-}
+function getBaseUrl(request: NextRequest): string {
+  const configuredBaseUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_BASE_URL;
 
-export async function GET(request: Request) {
-  // This will only work if Gmail is properly configured
-  if (!isGmailConfigured()) {
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}?error=gmail_not_configured`);
+  if (configuredBaseUrl) {
+    return configuredBaseUrl.replace(/\/$/, '');
   }
 
-  const { searchParams } = new URL(request.url);
-  const code = searchParams.get('code');
-  const state = searchParams.get('state');
-  const error = searchParams.get('error');
+  return request.nextUrl.origin;
+}
 
-  // Get state from cookies
-  const cookieHeader = request.headers.get('cookie') || '';
-  const cookies = Object.fromEntries(
-    cookieHeader.split(';').map(cookie => {
-      const [name, value] = cookie.trim().split('=');
-      return [name, value];
-    })
-  );
+function isGmailConfigured(): boolean {
+  return Boolean(process.env.GMAIL_CLIENT_ID && process.env.GMAIL_CLIENT_SECRET);
+}
 
-  const storedState = cookies['gmail_oauth_state'];
-  const wallet = cookies['gmail_oauth_wallet'];
+export async function GET(request: NextRequest) {
+  const baseUrl = getBaseUrl(request);
 
-  // Validate state parameter
+  if (!isGmailConfigured()) {
+    return NextResponse.redirect(`${baseUrl}/?error=gmail_not_configured`);
+  }
+
+  const code = request.nextUrl.searchParams.get('code');
+  const state = request.nextUrl.searchParams.get('state');
+  const error = request.nextUrl.searchParams.get('error');
+
+  const storedState = request.cookies.get('gmail_oauth_state')?.value;
+  const wallet = request.cookies.get('gmail_oauth_wallet')?.value;
+
   if (!state || state !== storedState) {
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/?error=invalid_state`);
+    return NextResponse.redirect(`${baseUrl}/?error=invalid_state`);
   }
 
   if (error) {
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/?error=${error}`);
+    return NextResponse.redirect(`${baseUrl}/?error=${encodeURIComponent(error)}`);
   }
 
   if (!code || !wallet) {
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/?error=missing_code_or_wallet`);
+    return NextResponse.redirect(`${baseUrl}/?error=missing_code_or_wallet`);
   }
 
   try {
-    // Exchange code for access token
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: {
@@ -54,36 +51,34 @@ export async function GET(request: Request) {
         grant_type: 'authorization_code',
         client_id: process.env.GMAIL_CLIENT_ID!,
         client_secret: process.env.GMAIL_CLIENT_SECRET!,
-        code: code,
-        redirect_uri: `${process.env.NEXT_PUBLIC_BASE_URL}/api/social-connect/gmail/callback`,
+        code,
+        redirect_uri: `${baseUrl}/api/social-connect/gmail/callback`,
       }),
     });
 
     if (!tokenResponse.ok) {
-      const errorData = await tokenResponse.json();
+      const errorData = await tokenResponse.json().catch(() => ({}));
       console.error('Gmail token exchange error:', errorData);
-      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/?error=token_exchange_failed`);
+      return NextResponse.redirect(`${baseUrl}/?error=token_exchange_failed`);
     }
 
     const tokenData = await tokenResponse.json();
 
-    // Get user info from Google
     const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
       headers: {
-        'Authorization': `Bearer ${tokenData.access_token}`,
+        Authorization: `Bearer ${tokenData.access_token}`,
       },
     });
 
     if (!userResponse.ok) {
-      const errorData = await userResponse.json();
+      const errorData = await userResponse.json().catch(() => ({}));
       console.error('Google user info error:', errorData);
-      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/?error=user_info_failed`);
+      return NextResponse.redirect(`${baseUrl}/?error=user_info_failed`);
     }
 
     const userData = await userResponse.json();
 
-    // Store the social account in Supabase
-    const accountData = {
+    const account = await upsertSocialAccount(wallet, {
       wallet_public_key: wallet,
       provider: 'gmail' as const,
       provider_user_id: userData.id,
@@ -93,19 +88,18 @@ export async function GET(request: Request) {
       refresh_token: tokenData.refresh_token,
       token_expires_at: new Date(Date.now() + tokenData.expires_in * 1000).toISOString(),
       verified: userData.verified_email,
-    };
-
-    const account = await upsertSocialAccount(wallet, accountData);
+    });
 
     if (!account) {
-      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/?error=account_storage_failed`);
+      return NextResponse.redirect(`${baseUrl}/?error=account_storage_failed`);
     }
 
-    // Redirect back to app with success
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/?social_connect=success&provider=gmail`);
-
-  } catch (error) {
-    console.error('Gmail OAuth error:', error);
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/?error=oauth_failed`);
+    const response = NextResponse.redirect(`${baseUrl}/?social_connect=success&provider=gmail`);
+    response.cookies.delete('gmail_oauth_state');
+    response.cookies.delete('gmail_oauth_wallet');
+    return response;
+  } catch (oauthError) {
+    console.error('Gmail OAuth error:', oauthError);
+    return NextResponse.redirect(`${baseUrl}/?error=oauth_failed`);
   }
 }
