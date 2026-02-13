@@ -131,6 +131,7 @@ export default function OnboardingPage() {
   const [backupStatus, setBackupStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [hasStoredBackup, setHasStoredBackup] = useState(false);
   const [isConnectingSocial, setIsConnectingSocial] = useState<'x' | 'google' | null>(null);
+  const [lastSocialProviderTried, setLastSocialProviderTried] = useState<'x' | 'google' | null>(null);
   const [socialConnectionError, setSocialConnectionError] = useState<string | null>(null);
   const [showRetryOptions, setShowRetryOptions] = useState(false);
 
@@ -149,7 +150,13 @@ export default function OnboardingPage() {
     // Check for social connection success from URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     const socialConnectSuccess = urlParams.get('social_connect');
-    const provider = urlParams.get('provider') as RecoveryProvider;
+    const providerParam = urlParams.get('provider');
+    const provider: RecoveryProvider | null =
+      providerParam === 'x' || providerParam === 'twitter'
+        ? 'x'
+        : providerParam === 'google' || providerParam === 'gmail'
+          ? 'google'
+          : null;
     
     if (socialConnectSuccess === 'success' && provider) {
       // Social connection was successful, proceed to wallet creation
@@ -310,6 +317,7 @@ export default function OnboardingPage() {
   const handleRecoveryLink = useCallback(
     async (provider: RecoveryProvider) => {
       setIsConnectingSocial(provider);
+      setLastSocialProviderTried(provider);
       setSocialConnectionError(null);
       setShowRetryOptions(false);
       
@@ -685,7 +693,7 @@ export default function OnboardingPage() {
                           type="button"
                           className="px-3 py-2 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-medium rounded-md border border-red-300 transition-colors"
                           onClick={() => {
-                            const provider = isConnectingSocial || 'x'; // Default to 'x' if no current connection
+                            const provider = lastSocialProviderTried || 'x'; // Default to 'x' if no previous provider
                             if (provider) {
                               handleRecoveryLink(provider as RecoveryProvider);
                             }
@@ -708,11 +716,11 @@ export default function OnboardingPage() {
                           type="button"
                           className="px-3 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs font-medium rounded-md border border-blue-300 transition-colors"
                           onClick={() => {
-                            const alternativeProvider = isConnectingSocial === 'x' ? 'google' : 'x';
+                            const alternativeProvider = lastSocialProviderTried === 'x' ? 'google' : 'x';
                             handleRecoveryLink(alternativeProvider as RecoveryProvider);
                           }}
                         >
-                          Try {isConnectingSocial === 'x' ? 'Google' : 'X'} Instead
+                          Try {lastSocialProviderTried === 'x' ? 'Google' : 'X'} Instead
                         </button>
                       </div>
                     )}
