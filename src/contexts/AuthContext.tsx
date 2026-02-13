@@ -179,16 +179,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Social login functions
+  const getOAuthRedirectUrl = () => {
+    const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+
+    if (configuredSiteUrl) {
+      return new URL('/auth/callback', configuredSiteUrl).toString();
+    }
+
+    if (typeof window !== 'undefined') {
+      return `${window.location.origin}/auth/callback`;
+    }
+
+    return undefined;
+  };
+
   const signInWithGoogle = async () => {
     try {
       if (!supabase?.auth) {
         return { error: { message: 'Supabase auth not available' } as AuthError };
       }
+
+      const redirectTo = getOAuthRedirectUrl();
+
+      if (!redirectTo) {
+        return { error: { message: 'OAuth redirect URL is not configured' } as AuthError };
+      }
       
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo,
         },
       });
       
@@ -204,11 +224,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!supabase?.auth) {
         return { error: { message: 'Supabase auth not available' } as AuthError };
       }
+
+      const redirectTo = getOAuthRedirectUrl();
+
+      if (!redirectTo) {
+        return { error: { message: 'OAuth redirect URL is not configured' } as AuthError };
+      }
       
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'twitter',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo,
         },
       });
       

@@ -44,6 +44,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ### Base URL
 ```env
 NEXT_PUBLIC_BASE_URL=http://localhost:3000
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
 ### Twitter OAuth (Optional)
@@ -69,9 +70,11 @@ GMAIL_CLIENT_SECRET=your_gmail_client_secret
 
 ### Twitter OAuth Setup
 1. Go to [Twitter Developer Portal](https://developer.twitter.com/en/portal/dashboard)
-2. Create a new app
-3. Set callback URL to: `http://localhost:3000/api/social-connect/twitter/callback`
-4. Copy the Client ID and Client Secret to your environment variables
+2. Create a new app and enable OAuth 2.0 (Web App)
+3. In Supabase Dashboard → Authentication → Providers → X (Twitter), copy the **Callback URL** (usually `https://<project-ref>.supabase.co/auth/v1/callback`)
+4. In X Developer Portal → User authentication settings, add that exact Supabase callback URL to **Callback URI / Redirect URL**
+5. Copy the OAuth 2.0 Client ID and Client Secret to your environment variables
+6. For Vercel production, set `NEXT_PUBLIC_SITE_URL` to your deployed domain and add that domain under Supabase Authentication → URL Configuration
 
 ### Gmail OAuth Setup
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
