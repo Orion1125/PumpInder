@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: pumpinder
+    runtime: node
+    plan: starter
+    buildCommand: npm install && npm run build && cp -r .next/static .next/standalone/PumpInder/.next/static && cp -r public .next/standalone/PumpInder/public
+    startCommand: node .next/standalone/PumpInder/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3000"
+      - key: HOSTNAME
+        value: "0.0.0.0"
+      - key: DATABASE_URL
+        sync: false
+      - key: PROXY_WALLET_ENCRYPTION_KEY
+        sync: false
+      - key: NEXT_PUBLIC_SOLANA_RPC_URL
+        sync: false
+      - key: NEXT_PUBLIC_SOLANA_NETWORK
+        value: mainnet-beta

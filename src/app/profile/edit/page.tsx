@@ -42,9 +42,8 @@ import {
 } from 'lucide-react';
 
 import { AppHeader } from '@/components/AppHeader';
+import { useWallet } from '@/hooks/useWallet';
 
-const ONBOARDING_STORAGE_KEY = 'pinder_onboarding_payload';
-const PROFILE_STORAGE_KEY = 'pinder_profile_extended';
 const MAX_PHOTOS = 5;
 const MAX_FAVORITE_TOKENS = 3;
 const MAX_INTERESTS = 4;
@@ -147,56 +146,48 @@ export default function EditProfilePage() {
   const [form, setForm] = useState<ProfileEditorState>(defaultForm);
   const [favoriteTokenInput, setFavoriteTokenInput] = useState('');
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle');
   const photoCount = useMemo(() => form.photos.filter(Boolean).length, [form.photos]);
+  const { publicKey, isConnected } = useWallet();
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!publicKey || !isConnected) return;
 
-    const hydrateForm = () => {
-      let next = { ...defaultForm };
-
+    const loadProfile = async () => {
       try {
-        const onboardingPayload = localStorage.getItem(ONBOARDING_STORAGE_KEY);
-        if (onboardingPayload) {
-          const parsed = JSON.parse(onboardingPayload);
-          next = {
-            ...next,
-            username: parsed.handle ? normalizeHandle(parsed.handle) : next.username,
-            birthday: parsed.birthday ?? next.birthday,
-            gender: parsed.gender ?? next.gender,
-            interests: Array.isArray(parsed.interests) ? parsed.interests : next.interests,
-            photos: normalizePhotos(parsed.photos),
-          };
-        }
-      } catch (err) {
-        console.warn('Unable to parse onboarding payload', err);
-      }
+        const res = await fetch(`/api/profiles/${publicKey}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const profile = data.profile;
+        if (!profile) return;
 
-      try {
-        const storedProfile = localStorage.getItem(PROFILE_STORAGE_KEY);
-        if (storedProfile) {
-          const parsed = JSON.parse(storedProfile) as ProfileEditorState;
-          next = {
-            ...next,
-            ...parsed,
-            username: parsed.username ? normalizeHandle(parsed.username) : next.username,
-            photos: normalizePhotos(parsed.photos),
-            socialHandles: { ...defaultSocialHandles, ...parsed.socialHandles },
-            jobTitle: parsed.jobTitle || next.jobTitle,
-            company: parsed.company || next.company,
-            industry: parsed.industry || next.industry,
-            experience: parsed.experience || next.experience,
-          };
-        }
+        setForm((prev) => ({
+          ...prev,
+          name: profile.handle || '',
+          username: profile.handle ? normalizeHandle(profile.handle) : '',
+          birthday: profile.birthday || '',
+          gender: profile.gender || '',
+          pronouns: profile.pronouns || '',
+          location: profile.location || '',
+          about: profile.bio || '',
+          interests: Array.isArray(profile.interests) ? profile.interests : [],
+          photos: normalizePhotos(profile.photos),
+          socialHandles: profile.socialHandles ? { ...defaultSocialHandles, ...profile.socialHandles } : { ...defaultSocialHandles },
+          favoriteTokens: Array.isArray(profile.favoriteTokens) ? profile.favoriteTokens : [],
+          bestExperience: profile.bestExperience || '',
+          jobTitle: profile.jobTitle || '',
+          company: profile.company || '',
+          industry: profile.industry || '',
+          experience: profile.experience || '',
+        }));
       } catch (err) {
-        console.warn('Unable to load saved profile', err);
+        console.warn('Unable to load profile from server', err);
       }
-
-      setForm(next);
     };
 
-    hydrateForm();
-  }, []);
+    loadProfile();
+  }, [publicKey, isConnected]);
 
   const handleInputChange = (field: keyof ProfileEditorState) => (
     event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -289,7 +280,7 @@ export default function EditProfilePage() {
     setForm((prev) => ({ ...prev, favoriteTokens: prev.favoriteTokens.filter((item) => item !== token) }));
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!form.name.trim()) {
@@ -302,46 +293,50 @@ export default function EditProfilePage() {
       return;
     }
 
+    if (!publicKey) {
+      console.error('Wallet not connected.');
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveStatus('idle');
+
     try {
-      if (typeof window !== 'undefined') {
-        const payload: ProfileEditorState = {
-          ...form,
-          photos: normalizePhotos(form.photos),
-          username: normalizeHandle(form.username),
-        };
+      const payload = {
+        handle: normalizeHandle(form.username),
+        birthday: form.birthday,
+        gender: form.gender,
+        interests: form.interests,
+        photos: normalizePhotos(form.photos).filter(Boolean),
+        bio: form.about,
+        location: form.location,
+        pronouns: form.pronouns,
+        socialHandles: form.socialHandles,
+        favoriteTokens: form.favoriteTokens,
+        bestExperience: form.bestExperience,
+        jobTitle: form.jobTitle,
+        company: form.company,
+        industry: form.industry,
+        experience: form.experience,
+      };
 
-        localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(payload));
+      const res = await fetch(`/api/profiles/${publicKey}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
 
-        const onboardingRaw = localStorage.getItem(ONBOARDING_STORAGE_KEY);
-        let recoveryMethod = '';
-        try {
-          if (onboardingRaw) {
-            const parsed = JSON.parse(onboardingRaw);
-            if (parsed?.recoveryMethod) {
-              recoveryMethod = parsed.recoveryMethod;
-            }
-          }
-        } catch (err) {
-          console.warn('Unable to read existing onboarding payload', err);
-        }
-
-        const onboardingPayload = {
-          handle: payload.username,
-          birthday: payload.birthday,
-          gender: payload.gender,
-          interests: payload.interests,
-          photos: payload.photos,
-          recoveryMethod,
-        };
-
-        localStorage.setItem(ONBOARDING_STORAGE_KEY, JSON.stringify(onboardingPayload));
+      if (!res.ok) {
+        throw new Error('Failed to save profile');
       }
 
-      console.log('Profile saved successfully');
-      setTimeout(() => console.log('Save state idle'), 2500);
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2500);
     } catch (err) {
       console.error('Unable to save profile', err);
-      console.error('Unable to save your profile locally. Please try again.');
+      setSaveStatus('error');
+    } finally {
+      setIsSaving(false);
     }
   };
 

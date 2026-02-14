@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { useState, useEffect, useCallback } from 'react';
 import { useWallet } from './useWallet';
 
 export interface UserProfileData {
@@ -10,77 +9,92 @@ export interface UserProfileData {
   gender: string;
   interests: string[];
   photos: string[];
+  bio?: string;
+  location?: string;
+  occupation?: string;
 }
 
 export function useUserProfile() {
   const [profile, setProfile] = useState<UserProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { wallet } = useWallet();
+  const { publicKey, isConnected } = useWallet();
+
+  const loadProfile = useCallback(async () => {
+    if (!publicKey || !isConnected) {
+      setProfile(null);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/profiles/${publicKey}`);
+      if (res.ok) {
+        const data = await res.json();
+        setProfile({
+          handle: data.profile.handle,
+          birthday: data.profile.birthday,
+          gender: data.profile.gender,
+          interests: data.profile.interests || [],
+          photos: data.profile.photos || [],
+          bio: data.profile.bio || '',
+          location: data.profile.location || '',
+          occupation: data.profile.occupation || '',
+        });
+      } else {
+        setProfile(null);
+      }
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+      setProfile(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [publicKey, isConnected]);
 
   useEffect(() => {
-    const loadProfile = async () => {
-      if (!wallet?.publicKey) {
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('handle, birthday, gender, interests, photos')
-          .eq('wallet_public_key', wallet.publicKey)
-          .single();
-
-        if (error && error.code !== 'PGRST116') {
-          console.error('Error loading user profile:', error);
-        } else if (data) {
-          setProfile(data);
-        }
-      } catch (error) {
-        console.error('Error loading user profile:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     loadProfile();
-  }, [wallet?.publicKey]);
+  }, [loadProfile]);
 
   const getProfilePicture = () => {
-    return profile?.photos[0] || null;
+    return profile?.photos?.[0] || null;
   };
 
   const saveProfile = async (profileData: UserProfileData) => {
-    if (!wallet?.publicKey) {
+    if (!publicKey) {
       throw new Error('Wallet not connected');
     }
 
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .upsert({
-          wallet_public_key: wallet.publicKey,
-          ...profileData,
-        }, {
-          onConflict: 'wallet_public_key'
-        });
+    const res = await fetch(`/api/profiles/${publicKey}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(profileData),
+    });
 
-      if (error) {
-        throw error;
-      }
-
-      setProfile(profileData);
-    } catch (error) {
-      console.error('Error saving profile:', error);
-      throw error;
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to save profile');
     }
+
+    const data = await res.json();
+    setProfile({
+      handle: data.profile.handle,
+      birthday: data.profile.birthday,
+      gender: data.profile.gender,
+      interests: data.profile.interests || [],
+      photos: data.profile.photos || [],
+      bio: data.profile.bio || '',
+      location: data.profile.location || '',
+      occupation: data.profile.occupation || '',
+    });
   };
 
   return {
     profile,
     isLoading,
     getProfilePicture,
-    hasProfilePicture: !!profile?.photos[0],
+    hasProfilePicture: !!profile?.photos?.[0],
     saveProfile,
+    refreshProfile: loadProfile,
   };
 }

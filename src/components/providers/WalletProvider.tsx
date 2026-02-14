@@ -10,7 +10,7 @@ import '@solana/wallet-adapter-react-ui/styles.css';
 
 const getNetwork = (): WalletAdapterNetwork => {
   const envNetwork = process.env.NEXT_PUBLIC_SOLANA_NETWORK as WalletAdapterNetwork | undefined;
-  return envNetwork ?? WalletAdapterNetwork.Devnet;
+  return envNetwork ?? WalletAdapterNetwork.Mainnet;
 };
 
 const getEndpoint = (network: WalletAdapterNetwork) => {
@@ -28,7 +28,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   return (
     <ConnectionProvider endpoint={endpoint} config={{ commitment: 'processed' }}>
-      <BaseWalletProvider wallets={wallets} autoConnect>
+      <BaseWalletProvider wallets={wallets} autoConnect={false}>
         <WalletModalProvider>{children}</WalletModalProvider>
       </BaseWalletProvider>
     </ConnectionProvider>

@@ -9,9 +9,9 @@ import { ReactionType } from '@/types/reactions';
 
 interface ProfileCardProps {
   profile: UserProfile;
-  onLike: (profileId: number) => void;
-  onPass: (profileId: number) => void;
-  onReaction: (profileId: number, type: ReactionType) => void;
+  onLike: (profileId: string) => void;
+  onPass: (profileId: string) => void;
+  onReaction: (profileId: string, type: ReactionType) => void;
   balance: number;
   isProcessing: boolean;
   animation: 'left' | 'right' | 'up' | null;
@@ -78,8 +78,8 @@ export function ProfileCard({
       className={`relative w-full h-full rounded-2xl overflow-hidden shadow-2xl shadow-pinder-purple/10 ${animationClass} touch-none select-none`}
     >
       <Image
-        src={profile.imageUrl}
-        alt={profile.name}
+        src={profile.photos?.[0] || '/placeholder.png'}
+        alt={profile.handle}
         fill
         sizes="(max-width: 768px) 100vw, 420px"
         className="absolute inset-0 w-full h-full object-cover pointer-events-none"
@@ -92,18 +92,22 @@ export function ProfileCard({
 
       <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
         <div>
-          <h2 className="text-4xl font-bold">{profile.name}, {profile.age}</h2>
+          <h2 className="text-4xl font-bold">{profile.handle}</h2>
           <p className="text-gray-300 mt-2 text-lg">{profile.bio}</p>
 
           <div className="flex flex-col gap-2 mt-4 text-gray-300">
-            <div className="flex items-center gap-2">
-              <BriefcaseIcon className="w-5 h-5 text-pinder-pink/80" />
-              <span>{profile.occupation}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <LocationIcon className="w-5 h-5 text-pinder-pink/80" />
-              <span>{profile.location}</span>
-            </div>
+            {profile.occupation && (
+              <div className="flex items-center gap-2">
+                <BriefcaseIcon className="w-5 h-5 text-pinder-pink/80" />
+                <span>{profile.occupation}</span>
+              </div>
+            )}
+            {profile.location && (
+              <div className="flex items-center gap-2">
+                <LocationIcon className="w-5 h-5 text-pinder-pink/80" />
+                <span>{profile.location}</span>
+              </div>
+            )}
           </div>
 
           <div className="flex flex-wrap gap-2 mt-4">

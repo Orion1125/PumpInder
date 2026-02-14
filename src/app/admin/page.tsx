@@ -11,7 +11,7 @@ const metrics = [
 
 export default function AdminPage() {
   return (
-    <div className="min-h-screen bg-(--bg-canvas) text-[#121212]">
+    <div className="min-h-screen text-(--ink-primary)">
       <AppHeader logoType="pumpinder" showBalance={false} showProfile={false} showNav={false} />
       
       <div className="mx-auto max-w-4xl space-y-10 px-6 py-16">
@@ -20,7 +20,7 @@ export default function AdminPage() {
           <h1 className="mt-2 text-4xl font-black">Admin Control Room</h1>
           <p className="text-white/70 text-lg mt-4">
             This placeholder will become the real-time dashboard showing treasury flow, signups, and active users once we
-            wire Supabase + RPC data.
+            wire NeonDB + RPC data.
           </p>
         </div>
 
@@ -36,7 +36,7 @@ export default function AdminPage() {
         <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
           <h2 className="text-2xl font-bold">Coming soon</h2>
           <ul className="mt-4 list-disc space-y-2 pl-6 text-white/70">
-            <li>Supabase queries for profiles, swipes, matches, and messages.</li>
+            <li>NeonDB queries for profiles, swipes, matches, and messages.</li>
             <li>On-chain treasury balance via Solana RPC.</li>
             <li>Boost analytics with token spend breakdowns.</li>
           </ul>

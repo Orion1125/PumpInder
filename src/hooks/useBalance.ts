@@ -14,7 +14,7 @@ export interface BalanceState {
 }
 
 export function useBalance(): BalanceState {
-  const { wallet, isConnected } = useWallet();
+  const { publicKey, isConnected } = useWallet();
   const [balances, setBalances] = useState<TokenBalance[]>([]);
   const [totalBalanceUSD, setTotalBalanceUSD] = useState(0);
   const [pinderBalance, setPinderBalance] = useState(0);
@@ -22,7 +22,7 @@ export function useBalance(): BalanceState {
   const [error, setError] = useState<string | null>(null);
 
   const fetchBalances = useCallback(async () => {
-    if (!wallet || !isConnected) {
+    if (!publicKey || !isConnected) {
       setBalances([]);
       setTotalBalanceUSD(0);
       setPinderBalance(0);
@@ -34,21 +34,14 @@ export function useBalance(): BalanceState {
 
     try {
       const checker = getTokenBalanceChecker();
-      const tokenBalances = await checker.getTokenBalances(wallet.publicKey);
+      const tokenBalances = await checker.getTokenBalances(publicKey);
       
       setBalances(tokenBalances);
       
-      // Calculate PINDER balance (if PINDER token exists)
       const pinderToken = tokenBalances.find(t => t.token === 'PINDER');
       setPinderBalance(pinderToken?.balance || 0);
       
-      // For now, we'll assume 1 PINDER = 1 USD for simplicity
-      // In a real app, you'd fetch actual prices from an oracle
       const totalUSD = tokenBalances.reduce((sum, token) => {
-        if (token.token === 'PINDER') {
-          return sum + token.balance; // Assuming 1:1 ratio
-        }
-        // For USDC/USDT, they're already USD-pegged
         return sum + token.balance;
       }, 0);
       
@@ -62,10 +55,10 @@ export function useBalance(): BalanceState {
     } finally {
       setIsLoading(false);
     }
-  }, [wallet, isConnected]);
+  }, [publicKey, isConnected]);
 
   useEffect(() => {
-    if (wallet && isConnected) {
+    if (publicKey && isConnected) {
       fetchBalances();
     } else {
       setBalances([]);
@@ -74,7 +67,7 @@ export function useBalance(): BalanceState {
       setIsLoading(false);
       setError(null);
     }
-  }, [wallet, isConnected, fetchBalances]);
+  }, [publicKey, isConnected, fetchBalances]);
 
   return {
     balances,

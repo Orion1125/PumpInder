@@ -8,18 +8,13 @@ import { useWallet } from '@/hooks/useWallet';
 
 type TransactionType = 'BOOST' | 'SIGNAL' | 'RECEIVE' | 'PASS';
 
-const ledgerRows: Array<{
+type LedgerRow = {
   time: string;
   type: TransactionType;
   entity: string;
   amountDisplay: string;
   tone: 'profit' | 'loss' | 'neutral';
-}> = [
-  { time: '14:02 PM', type: 'BOOST', entity: 'Profile Boost', amountDisplay: '- 500.00', tone: 'loss' },
-  { time: '12:15 PM', type: 'SIGNAL', entity: '@Satoshi', amountDisplay: '- 100.00', tone: 'loss' },
-  { time: '09:00 AM', type: 'RECEIVE', entity: '0x.....8a', amountDisplay: '+ 5,000.00', tone: 'profit' },
-  { time: 'YESTERDAY', type: 'PASS', entity: 'Batch Action', amountDisplay: '- 0.00', tone: 'neutral' },
-];
+};
 
 const transactionMeta: Record<TransactionType, { label: string; textColor: string; icon: React.ComponentType<{ size?: number; strokeWidth?: number }> }> = {
   BOOST: { label: 'BOOST', textColor: '#FF4D00', icon: TrendingUp },
@@ -45,6 +40,7 @@ export default function BalancePage() {
   const { totalBalanceUSD, isLoading } = useBalance();
   const { isConnected } = useWallet();
   const [displayedBalance, setDisplayedBalance] = useState(0);
+  const [ledgerRows] = useState<LedgerRow[]>([]);
 
   // Handle connection state changes separately
   useEffect(() => {
@@ -83,9 +79,9 @@ export default function BalancePage() {
 
       <div className="content-width">
 
-        <section className="card treasury-card" aria-labelledby="treasury-heading" data-animate="fade">
-          <div className="card-head" style={{margin: '0 -2.25rem', padding: '0 2.25rem', position: 'relative'}}>
-            <div style={{position: 'absolute', bottom: '0', left: '-2.25rem', right: '-2.25rem', height: '4px', backgroundColor: 'black'}}></div>
+        <section className="card treasury-card" aria-labelledby="treasury-heading" data-animate="fade" style={{overflow: 'hidden'}}>
+          <div className="card-head" style={{margin: '0 -1rem', padding: '0 1rem', position: 'relative'}}>
+            <div style={{position: 'absolute', bottom: '0', left: '-1rem', right: '-1rem', height: '4px', backgroundColor: 'black'}}></div>
             <h2 id="treasury-heading" className="display-font text-center pt-0 pb-6" style={{fontSize: '1.5rem', fontWeight: '700', letterSpacing: '0.12em', textTransform: 'uppercase'}}>BALANCE</h2>
           </div>
 
@@ -165,6 +161,14 @@ export default function BalancePage() {
                   </div>
                 );
               })}
+
+              {ledgerRows.length === 0 && (
+                <div className="table-row" role="row">
+                  <span className="table-cell" style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '2rem 0', color: '#999' }}>
+                    No transactions yet. Start swiping to generate activity.
+                  </span>
+                </div>
+              )}
             </div>
 
           <nav className="pagination" aria-label="Ledger pagination">

@@ -1,148 +1,75 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Keypair } from '@solana/web3.js';
-import { mnemonicToSeedSync } from 'bip39';
-import { derivePath } from 'ed25519-hd-key';
+import { useCallback, useState } from 'react';
+import { useWallet as useAdapterWallet } from '@solana/wallet-adapter-react';
+import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 
-export interface WalletInfo {
-  publicKey: string;
-  secretPhrase: string;
-}
+export type WalletConnectionState =
+  | 'disconnected'
+  | 'connecting'
+  | 'connected'
+  | 'connection-failed';
 
-export type WalletConnectionState = 
-  | 'disconnected' 
-  | 'connecting' 
-  | 'connected' 
-  | 'wallet-not-created' 
-  | 'connection-failed' 
-  | 'wallet-unavailable';
-
-export interface WalletState {
-  wallet: WalletInfo | null;
-  isLoading: boolean;
-  connectionState: WalletConnectionState;
-  error: string | null;
-}
+const PHANTOM_WALLET_NAME = 'Phantom';
 
 export function useWallet() {
-  const [wallet, setWallet] = useState<WalletInfo | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [connectionState, setConnectionState] = useState<WalletConnectionState>('disconnected');
+  const { publicKey, connected, connecting, disconnect, wallet, select, connect, signMessage } = useAdapterWallet();
+  const { setVisible } = useWalletModal();
   const [error, setError] = useState<string | null>(null);
 
-  // Load wallet from localStorage on mount
-  useEffect(() => {
-    const loadWallet = () => {
-      try {
-        const savedWallet = localStorage.getItem('pinder_wallet');
-        if (savedWallet) {
-          const walletData = JSON.parse(savedWallet);
-          setWallet(walletData);
-          setConnectionState('connected');
-        } else {
-          setConnectionState('wallet-not-created');
-        }
-      } catch (loadError) {
-        console.error('Error loading wallet:', loadError);
-        setError('Failed to load wallet data');
-        setConnectionState('wallet-unavailable');
-        localStorage.removeItem('pinder_wallet');
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const connectionState: WalletConnectionState = connected
+    ? 'connected'
+    : connecting
+      ? 'connecting'
+      : 'disconnected';
 
-    // Use setTimeout to avoid synchronous state updates
-    setTimeout(loadWallet, 0);
-  }, []);
-
-  const connectWallet = async (): Promise<boolean> => {
-    if (wallet) {
-      setConnectionState('connected');
-      return true;
-    }
-
-    setConnectionState('connecting');
+  const connectWallet = useCallback(async () => {
     setError(null);
 
     try {
-      const savedWallet = localStorage.getItem('pinder_wallet');
-      if (!savedWallet) {
-        setConnectionState('wallet-not-created');
-        return false;
+      if (!wallet || wallet.adapter.name !== PHANTOM_WALLET_NAME) {
+        setVisible(true);
+        select(PHANTOM_WALLET_NAME as never);
+        return;
       }
 
-      const walletData = JSON.parse(savedWallet);
-      setWallet(walletData);
-      setConnectionState('connected');
-      return true;
-    } catch (connectError) {
-      console.error('Error connecting wallet:', connectError);
-      setError('Failed to connect wallet');
-      setConnectionState('connection-failed');
-      return false;
+      await connect();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unable to connect Phantom wallet';
+      setError(message);
+      setVisible(true);
     }
-  };
+  }, [wallet, select, connect, setVisible]);
 
   const disconnectWallet = () => {
-    setConnectionState('disconnected');
     setError(null);
+    disconnect();
   };
 
-  const createWallet = (mnemonic: string): WalletInfo => {
-    const seed = mnemonicToSeedSync(mnemonic);
-    const derivationPath = "m/44'/501'/0'/0'";
-    const derivedKey = derivePath(derivationPath, seed.toString('hex')).key;
-    const keypair = Keypair.fromSeed(derivedKey);
-    
-    return {
-      publicKey: keypair.publicKey.toBase58(),
-      secretPhrase: mnemonic
-    };
-  };
-
-  const saveWallet = (walletData: WalletInfo) => {
-    setWallet(walletData);
-    setConnectionState('connected');
-    setError(null);
-    localStorage.setItem('pinder_wallet', JSON.stringify(walletData));
-  };
-
-  const clearWallet = () => {
-    setWallet(null);
-    setConnectionState('wallet-not-created');
-    setError(null);
-    localStorage.removeItem('pinder_wallet');
-  };
-
-  const getKeypair = (): Keypair | null => {
-    if (!wallet) return null;
-    
-    try {
-      const seed = mnemonicToSeedSync(wallet.secretPhrase);
-      const derivationPath = "m/44'/501'/0'/0'";
-      const derivedKey = derivePath(derivationPath, seed.toString('hex')).key;
-      return Keypair.fromSeed(derivedKey);
-    } catch (error) {
-      console.error('Error deriving keypair:', error);
-      setError('Failed to derive keypair');
-      return null;
+  const signWalletMessage = useCallback(async (message: string) => {
+    if (!signMessage) {
+      throw new Error('Wallet does not support message signing');
     }
-  };
+
+    const encoded = new TextEncoder().encode(message);
+    const signature = await signMessage(encoded);
+    return Array.from(signature);
+  }, [signMessage]);
 
   return {
-    wallet,
-    isLoading,
+    wallet: publicKey
+      ? { publicKey: publicKey.toBase58() }
+      : null,
+    isLoading: connecting,
     connectionState,
     error,
-    createWallet,
-    saveWallet,
-    clearWallet,
     connectWallet,
     disconnectWallet,
-    getKeypair,
-    hasWallet: !!wallet,
-    isConnected: connectionState === 'connected'
+    hasWallet: connected && !!publicKey,
+    isConnected: connected && !!publicKey,
+    publicKey: publicKey?.toBase58() ?? null,
+    walletName: wallet?.adapter.name ?? null,
+    canSignMessage: !!signMessage,
+    signWalletMessage,
   };
 }

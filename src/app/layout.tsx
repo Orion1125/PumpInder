@@ -4,7 +4,9 @@ import { JetBrains_Mono } from "next/font/google";
 import { Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { AppProviders } from "@/components/providers/AppProviders";
-import { Toolbar } from "@/components/Toolbar";
+import { PageTransition } from "@/components/PageTransition";
+import { CursorParticles } from "@/components/CursorParticles";
+import { GlobalTicker } from "@/components/GlobalTicker";
 
 const clashDisplay = Inter({
   variable: "--font-clash-display",
@@ -39,11 +41,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html>
+    <html suppressHydrationWarning>
+      <head>
+        {/* Apply saved theme before first paint to prevent flash */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var s=localStorage.getItem('appearance-settings');if(s){var t=JSON.parse(s).theme;if(t==='dark')document.documentElement.classList.add('dark');else if(t==='system'&&window.matchMedia('(prefers-color-scheme:dark)').matches)document.documentElement.classList.add('dark');}}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body className={`${clashDisplay.variable} ${jetbrainsMono.variable} ${spaceGrotesk.variable} antialiased`}>
         <AppProviders>
-          {children}
-          <Toolbar />
+          <CursorParticles />
+          <PageTransition>
+            {children}
+          </PageTransition>
+          <GlobalTicker />
         </AppProviders>
       </body>
     </html>

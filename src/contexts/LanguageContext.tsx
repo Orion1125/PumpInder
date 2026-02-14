@@ -1,7 +1,6 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase } from '@/lib/supabase';
 import { useWallet } from '@/hooks/useWallet';
 
 type Language = 'en' | 'es' | 'fr' | 'de' | 'ja' | 'zh';
@@ -27,7 +26,7 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 import translations from '../translations';
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const { wallet } = useWallet();
+  const { publicKey } = useWallet();
   const [appearanceSettings, setAppearanceSettings] = useState<AppearanceSettings | null>(null);
 
   useEffect(() => {
@@ -38,43 +37,40 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     };
 
     const loadSettings = async () => {
-      if (!wallet?.publicKey) {
+      if (!publicKey) {
+        setAppearanceSettings(defaultSettings);
         return;
       }
 
       try {
-        const { data, error } = await supabase
-          .from('user_settings')
-          .select('theme, language, monochrome_pictures')
-          .eq('wallet_public_key', wallet.publicKey)
-          .single();
-
-        if (error && error.code !== 'PGRST116') {
-          console.error('Error loading appearance settings:', error);
-        } else if (data) {
-          setAppearanceSettings({
-            theme: data.theme,
-            language: data.language,
-            monochromePictures: data.monochrome_pictures,
-          });
+        const res = await fetch(`/api/settings?wallet=${publicKey}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.settings) {
+            setAppearanceSettings({
+              theme: data.settings.theme || 'system',
+              language: data.settings.language || 'en',
+              monochromePictures: data.settings.monochromePictures ?? false,
+            });
+          } else {
+            setAppearanceSettings(defaultSettings);
+          }
         } else {
           setAppearanceSettings(defaultSettings);
         }
       } catch (error) {
         console.error('Error loading appearance settings:', error);
         setAppearanceSettings(defaultSettings);
-      } finally {
-        // Settings loaded
       }
     };
 
     loadSettings();
-  }, [wallet?.publicKey]);
+  }, [publicKey]);
 
   const language = appearanceSettings?.language || 'en';
 
   const updateAppearanceSettings = async (newSettings: Partial<AppearanceSettings>) => {
-    if (!wallet?.publicKey) {
+    if (!publicKey) {
       console.error('Wallet not connected');
       return;
     }
@@ -83,20 +79,16 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     setAppearanceSettings(updatedSettings);
 
     try {
-      const { error } = await supabase
-        .from('user_settings')
-        .upsert({
-          wallet_public_key: wallet.publicKey,
+      await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          walletPublicKey: publicKey,
           theme: updatedSettings.theme,
           language: updatedSettings.language,
-          monochrome_pictures: updatedSettings.monochromePictures,
-        }, {
-          onConflict: 'wallet_public_key'
-        });
-
-      if (error) {
-        throw error;
-      }
+          monochromePictures: updatedSettings.monochromePictures,
+        }),
+      });
     } catch (error) {
       console.error('Error saving appearance settings:', error);
     }

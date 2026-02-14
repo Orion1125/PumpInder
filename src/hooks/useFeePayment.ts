@@ -2,9 +2,8 @@
 
 import { useState, useCallback } from 'react';
 import { useWallet } from './useWallet';
-import { getTokenBalanceChecker } from '@/lib/spl';
-import { getPaymentService, PaymentResult } from '@/lib/transactions';
-import { FEE_AMOUNTS, SupportedToken } from '@/constants/tokens';
+import { FEE_AMOUNTS, FEE_AMOUNTS_USD } from '@/constants/tokens';
+import { useSolPrice } from './useSolPrice';
 
 export type FeeType = 'LIKE' | 'SUPERLIKE' | 'TIP_SMALL' | 'TIP_MEDIUM' | 'TIP_LARGE';
 
@@ -14,11 +13,19 @@ export interface FeePaymentState {
   pendingFee: {
     type: FeeType;
     amount: number;
-    token: SupportedToken;
-    requiresATA: boolean;
+    usdAmount: number;
+    recipientWallet: string;
+    recipientProxyWallet?: string;
   } | null;
   error: string | null;
-  lastPayment: PaymentResult | null;
+  lastPayment: {
+    success: boolean;
+    signature?: string;
+    error?: string;
+    recipientWallet: string;
+    amountPaid: number;
+    actionType: FeeType;
+  } | null;
 }
 
 export function useFeePayment() {
@@ -30,9 +37,35 @@ export function useFeePayment() {
     lastPayment: null,
   });
 
-  const { getKeypair, wallet } = useWallet();
+  const { publicKey, isConnected } = useWallet();
+  const { solPrice, usdToSol } = useSolPrice();
+  const [onSuccessCallback, setOnSuccessCallback] = useState<(() => void) | null>(null);
 
+  /** Get the USD target amount for a given fee type. */
+  const getUsdAmount = (type: FeeType): number => {
+    switch (type) {
+      case 'LIKE':
+        return FEE_AMOUNTS_USD.LIKE;
+      case 'SUPERLIKE':
+        return FEE_AMOUNTS_USD.SUPERLIKE;
+      case 'TIP_SMALL':
+        return FEE_AMOUNTS_USD.TIP.SMALL;
+      case 'TIP_MEDIUM':
+        return FEE_AMOUNTS_USD.TIP.MEDIUM;
+      case 'TIP_LARGE':
+        return FEE_AMOUNTS_USD.TIP.LARGE;
+      default:
+        throw new Error(`Unknown fee type: ${type}`);
+    }
+  };
+
+  /** Returns the SOL fee for a type, using live price when available, otherwise static fallback. */
   const getFeeAmount = (type: FeeType): number => {
+    const usd = getUsdAmount(type);
+    const dynamic = usdToSol(usd);
+    if (dynamic !== null) return dynamic;
+
+    // Fallback to static amounts when price feed is unavailable
     switch (type) {
       case 'LIKE':
         return FEE_AMOUNTS.LIKE;
@@ -49,52 +82,25 @@ export function useFeePayment() {
     }
   };
 
-  const checkBalanceAndPreparePayment = useCallback(async (
-    feeType: FeeType
-  ): Promise<{ canPay: boolean; token: SupportedToken | null; requiresATA: boolean }> => {
-    const userKeypair = getKeypair();
-    if (!userKeypair || !wallet?.publicKey) {
-      return { canPay: false, token: null, requiresATA: false };
+  const initiatePayment = useCallback(async (feeType: FeeType, recipientWallet?: string, onSuccess?: () => void) => {
+    // Store the callback so confirmPayment can invoke it
+    if (onSuccess) {
+      setOnSuccessCallback(() => onSuccess);
+    } else {
+      setOnSuccessCallback(null);
     }
-
-    try {
-      const amount = getFeeAmount(feeType);
-      const balanceChecker = getTokenBalanceChecker();
-      const sufficientToken = await balanceChecker.findSufficientToken(
-        wallet.publicKey,
-        amount
-      );
-
-      if (!sufficientToken) {
-        return { canPay: false, token: null, requiresATA: false };
-      }
-
-      const paymentService = getPaymentService();
-      const simulation = await paymentService.simulatePayment({
-        amount,
-        token: sufficientToken.token,
-        userKeypair,
-      });
-
-      return {
-        canPay: true,
-        token: sufficientToken.token,
-        requiresATA: simulation.requiresATA,
-      };
-    } catch (error) {
-      console.error('Error checking balance:', error);
-      return { canPay: false, token: null, requiresATA: false };
-    }
-  }, [getKeypair, wallet?.publicKey]);
-
-  const initiatePayment = useCallback(async (
-    feeType: FeeType
-  ) => {
-    const userKeypair = getKeypair();
-    if (!userKeypair) {
+    if (!publicKey || !isConnected) {
       setState(prev => ({
         ...prev,
-        error: 'Wallet not connected. Please connect your wallet to continue.',
+        error: 'Wallet not connected. Please connect your Phantom wallet to continue.',
+      }));
+      return;
+    }
+
+    if (!recipientWallet) {
+      setState(prev => ({
+        ...prev,
+        error: 'Recipient wallet is required for this action.',
       }));
       return;
     }
@@ -103,18 +109,13 @@ export function useFeePayment() {
 
     try {
       const amount = getFeeAmount(feeType);
-      const { canPay, token, requiresATA } = await checkBalanceAndPreparePayment(feeType);
+      const usdAmount = getUsdAmount(feeType);
 
-      if (!canPay || !token) {
-        setState(prev => ({
-          ...prev,
-          isLoading: false,
-          error: 'Insufficient balance. Please add funds to your wallet to continue.',
-        }));
-        return;
-      }
+      // Resolve the recipient's proxy wallet so the user sees the real destination
+      const proxyRes = await fetch(`/api/proxy-wallet?wallet=${recipientWallet}`, { cache: 'no-store' });
+      const proxyData = await proxyRes.json();
+      const recipientProxy = proxyData?.proxyPublicKey ?? recipientWallet;
 
-      // Show payment confirmation modal
       setState(prev => ({
         ...prev,
         isLoading: false,
@@ -122,12 +123,11 @@ export function useFeePayment() {
         pendingFee: {
           type: feeType,
           amount,
-          token,
-          requiresATA,
+          usdAmount,
+          recipientWallet,       // main wallet — used by transfer API
+          recipientProxyWallet: recipientProxy, // proxy address — shown in modal
         },
       }));
-
-      // Note: The actual payment will be processed in confirmPayment
     } catch (error) {
       setState(prev => ({
         ...prev,
@@ -135,41 +135,50 @@ export function useFeePayment() {
         error: error instanceof Error ? error.message : 'Failed to prepare payment',
       }));
     }
-  }, [getKeypair, checkBalanceAndPreparePayment]);
+  }, [publicKey, isConnected]);
 
   const confirmPayment = useCallback(async () => {
     const { pendingFee } = state;
-    if (!pendingFee || !wallet?.publicKey) return;
-
-    const userKeypair = getKeypair();
-    if (!userKeypair) {
-      setState(prev => ({
-        ...prev,
-        error: 'Wallet not connected. Please connect your wallet to continue.',
-      }));
-      return;
-    }
+    if (!pendingFee || !publicKey) return;
 
     setState(prev => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      const paymentService = getPaymentService();
-      const result = await paymentService.payServiceFee({
-        amount: pendingFee.amount,
-        token: pendingFee.token,
-        userKeypair,
+      const response = await fetch('/api/proxy-wallet/transfer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fromWalletPublicKey: publicKey,
+          toWalletPublicKey: pendingFee.recipientWallet,
+          amountSol: pendingFee.amount,
+          actionType: pendingFee.type,
+        }),
       });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.error || 'Payment failed');
+      }
 
       setState(prev => ({
         ...prev,
         isLoading: false,
         isModalOpen: false,
         pendingFee: null,
-        lastPayment: result,
-        error: result.success ? null : result.error || null,
+        lastPayment: {
+          success: true,
+          signature: data.signature,
+          recipientWallet: data.toProxyWallet || pendingFee.recipientProxyWallet || pendingFee.recipientWallet,
+          amountPaid: pendingFee.amount,
+          actionType: pendingFee.type,
+        },
       }));
 
-      return result;
+      // Fire the success callback (e.g., record the swipe)
+      if (onSuccessCallback) {
+        try { onSuccessCallback(); } catch { /* ignore */ }
+        setOnSuccessCallback(null);
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Payment failed';
       setState(prev => ({
@@ -177,14 +186,8 @@ export function useFeePayment() {
         isLoading: false,
         error: errorMessage,
       }));
-      return {
-        success: false,
-        error: errorMessage,
-        tokenUsed: pendingFee.token,
-        amountPaid: pendingFee.amount,
-      };
     }
-  }, [wallet?.publicKey, getKeypair, state]);
+  }, [publicKey, state, onSuccessCallback]);
 
   const cancelPayment = useCallback(() => {
     setState(prev => ({
@@ -193,6 +196,7 @@ export function useFeePayment() {
       pendingFee: null,
       error: null,
     }));
+    setOnSuccessCallback(null);
   }, []);
 
   const clearError = useCallback(() => {
@@ -204,22 +208,17 @@ export function useFeePayment() {
   }, []);
 
   return {
-    // State
     isLoading: state.isLoading,
     isModalOpen: state.isModalOpen,
     pendingFee: state.pendingFee,
     error: state.error,
     lastPayment: state.lastPayment,
-
-    // Actions
+    solPrice,
     initiatePayment,
     confirmPayment,
     cancelPayment,
     clearError,
     resetLastPayment,
-    checkBalanceAndPreparePayment,
-
-    // Helpers
     getFeeAmount,
   };
 }

@@ -3,6 +3,7 @@
 import { useCallback, useTransition, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Zap, Pointer } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Hook to handle client-side mounting to prevent hydration mismatches
 function useIsMounted() {
@@ -24,18 +25,22 @@ export default function Home() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const isMounted = useIsMounted();
+  const { hasCompletedProfile, isLoading } = useAuth();
 
   const startExperience = useCallback(() => {
     startTransition(() => {
-      // For now, always go to onboarding since we removed profile edit and swipe
-      router.push('/onboarding');
+      if (isLoading) {
+        return;
+      }
+
+      router.push(hasCompletedProfile ? '/swipe' : '/onboarding');
     });
-  }, [router]);
+  }, [router, hasCompletedProfile, isLoading]);
 
   if (!isMounted) {
     // Return a minimal loading state that matches server render
     return (
-      <div className="relative min-h-screen bg-canvas" suppressHydrationWarning>
+      <div className="relative min-h-screen" suppressHydrationWarning>
         <div className="fixed inset-0 border-4 border-black pointer-events-none z-50" suppressHydrationWarning />
         <div className="main-content min-h-screen flex flex-col" suppressHydrationWarning>
           <div className="flex-1 flex items-center justify-center">
@@ -52,7 +57,7 @@ export default function Home() {
   }
 
   return (
-    <div className="relative min-h-screen bg-canvas" suppressHydrationWarning>
+    <div className="relative min-h-screen" suppressHydrationWarning>
       {/* Thick Black Border around viewport */}
       <div className="fixed inset-0 border-4 border-black pointer-events-none z-50" suppressHydrationWarning />
       
@@ -98,11 +103,11 @@ export default function Home() {
             <div className="flex flex-col sm:flex-row gap-4 items-center">
               <button
                 onClick={startExperience}
-                disabled={isPending}
+                disabled={isPending || isLoading}
                 className="btn-primary flex items-center gap-3 cursor-pointer disabled:opacity-70"
               >
                 <Zap size={20} />
-                {isPending ? 'MINTING...' : 'MINT YOUR PROFILE'}
+                {isPending || isLoading ? 'LOADING...' : hasCompletedProfile ? 'CONTINUE TO SWIPE' : 'MINT YOUR PROFILE'}
               </button>
               
               <button

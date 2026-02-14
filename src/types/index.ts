@@ -1,19 +1,22 @@
 export interface UserProfile {
-  id: number;
-  name: string;
-  age: number;
-  bio: string;
+  id: string;
+  walletPublicKey: string;
+  handle: string;
+  birthday: string;
+  gender: string;
   interests: string[];
-  imageUrl: string;
-  likesYou: boolean;
+  photos: string[];
+  bio: string;
   location: string;
   occupation: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export type MessageStatus = 'sending' | 'sent' | 'read';
 
 export interface ChatMessage {
-  id: number;
+  id: string;
   sender: 'you' | 'match';
   content: string;
   timestamp: string;
@@ -21,10 +24,11 @@ export interface ChatMessage {
 }
 
 export interface ChatThread {
-  id: number;
-  matchId: number;
+  id: string;
+  matchId: string;
   matchName: string;
   matchAvatar: string;
+  matchWallet: string;
   lastActive: string;
   unseenCount: number;
   messages: ChatMessage[];

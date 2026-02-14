@@ -7,25 +7,16 @@ import {
   ChevronRight,
   Eye,
   HelpCircle,
-  Key,
   Power,
   Shield,
   X,
 } from 'lucide-react';
 import { useWallet } from '@/hooks/useWallet';
 import { AppHeader } from '@/components/AppHeader';
-import LoginMethodsModal from '@/components/LoginMethodsModal';
 import AppearanceModal from '@/components/AppearanceModal';
 import { useTranslation } from '@/hooks/useTranslation';
 
 const menuItems = [
-  {
-    id: 'login_methods',
-    labelKey: 'settings.loginMethods',
-    href: '/settings/login-methods',
-    icon: Key,
-    isModal: true,
-  },
   {
     id: 'account_security',
     labelKey: 'settings.accountSecurity',
@@ -50,19 +41,14 @@ const menuItems = [
 ] as const;
 
 export default function SettingsMainPage() {
-  const { clearWallet } = useWallet();
+  const { disconnectWallet } = useWallet();
   const router = useRouter();
   const { t } = useTranslation();
-  const [showLoginMethodsModal, setShowLoginMethodsModal] = useState(false);
   const [showAppearanceModal, setShowAppearanceModal] = useState(false);
 
   const handleLogout = () => {
-    clearWallet();
+    disconnectWallet();
     router.push('/');
-  };
-
-  const handleLoginMethodsClick = () => {
-    setShowLoginMethodsModal(true);
   };
 
   const handleAppearanceClick = () => {
@@ -80,12 +66,11 @@ export default function SettingsMainPage() {
           <nav className="flex flex-col p-6 gap-4" aria-label="Settings categories">
             {menuItems.map(({ id, labelKey, icon: Icon, href, isModal }) => {
               if (isModal) {
-                const handleClick = id === 'login_methods' ? handleLoginMethodsClick : handleAppearanceClick;
                 return (
                   <button
                     key={id}
                     type="button"
-                    onClick={handleClick}
+                    onClick={handleAppearanceClick}
                     className="flex items-center justify-between h-16 px-5 border-2 border-black rounded-md shadow-[3px_3px_0px_#121212] bg-white text-black no-underline font-mono text-sm tracking-wider uppercase transition-all hover:translate-y-[-2px] hover:shadow-[5px_5px_0px_#121212] active:translate-y-[2px] active:shadow-[0px_0px_0px_#121212] focus:outline-none w-full cursor-pointer"
                   >
                     <div className="inline-flex items-center gap-3">
@@ -137,11 +122,6 @@ export default function SettingsMainPage() {
         </section>
       </div>
 
-      <LoginMethodsModal 
-        isOpen={showLoginMethodsModal}
-        onClose={() => setShowLoginMethodsModal(false)}
-      />
-      
       <AppearanceModal 
         isOpen={showAppearanceModal}
         onClose={() => setShowAppearanceModal(false)}

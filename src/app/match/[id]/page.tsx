@@ -9,7 +9,7 @@ export default function MatchChatPage() {
   const matchId = params?.id;
 
   return (
-    <div className="min-h-screen bg-(--bg-canvas) text-[#121212]">
+    <div className="min-h-screen text-(--ink-primary)">
       <AppHeader logoType="back" showBalance={false} showProfile={false} showNav={false} />
       
       <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
@@ -17,7 +17,7 @@ export default function MatchChatPage() {
           <p className="text-sm uppercase tracking-[0.4em] text-pinder-pink">Chat coming soon</p>
           <h1 className="text-4xl font-black">Match #{matchId}</h1>
           <p className="text-[#4A4A4A] text-lg">
-            This route will unlock once both users like each other and we write messages to Supabase. Expect a minimal text chat
+            This route will unlock once both users like each other. Expect a minimal text chat
             experience with wallet identity.
           </p>
           <Link

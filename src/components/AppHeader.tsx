@@ -6,6 +6,7 @@ import { Edit, Settings, User } from 'lucide-react';
 
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { ConnectWalletButton } from '@/components/ConnectWalletButton';
+import { ProxyWalletButton } from '@/components/ProxyWalletButton';
 
 type ActivePage = 'swipe' | 'chat' | null;
 type LogoType = 'pumpinder' | 'back';
@@ -83,7 +84,10 @@ export function AppHeader({
       {(showBalance || showProfile) && (
         <div className="swipe-header-right">
           {showBalance && (
-            <ConnectWalletButton balance={balance} onContinueSwiping={onContinueSwiping} />
+            <div className="flex items-center gap-2">
+              <ConnectWalletButton balance={balance} onContinueSwiping={onContinueSwiping} />
+              <ProxyWalletButton />
+            </div>
           )}
           
           {showProfile && (
@@ -118,6 +122,7 @@ export function AppHeader({
                   <Settings size={16} strokeWidth={2} />
                   Settings
                 </button>
+
               </div>
             </div>
           )}

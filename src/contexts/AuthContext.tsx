@@ -1,282 +1,99 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { User, Session, AuthError } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
-
-interface AuthContextType {
-  // Core auth states
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  user: User | null;
-  session: Session | null;
-  
-  // Profile completion state
-  hasCompletedProfile: boolean;
-  profile: Profile | null;
-  
-  // Wallet state
-  hasWallet: boolean;
-  
-  // Social accounts
-  socialAccounts: SocialAccount[];
-  
-  // Actions
-  signInWithGoogle: () => Promise<{ error: AuthError | null }>;
-  signInWithTwitter: () => Promise<{ error: AuthError | null }>;
-  signOut: () => Promise<{ error: AuthError | null }>;
-  refreshProfile: () => Promise<void>;
-}
+import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
+import { useWallet } from '@solana/wallet-adapter-react';
 
 interface Profile {
   id: string;
-  wallet_public_key?: string;
+  walletPublicKey: string;
   handle: string;
-  name: string;
   birthday: string;
   gender: string;
-  pronouns?: string;
   interests: string[];
   photos: string[];
-  created_at: string;
-  updated_at: string;
+  bio: string;
+  location: string;
+  occupation: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
-interface SocialAccount {
-  id: string;
-  provider: 'google' | 'twitter';
-  provider_user_id: string;
-  email?: string;
-  username?: string;
-  avatar_url?: string;
-  verified: boolean;
-  created_at: string;
+interface AuthContextType {
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  walletAddress: string | null;
+  hasCompletedProfile: boolean;
+  profile: Profile | null;
+  signOut: () => void;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { publicKey, connected, disconnect } = useWallet();
   const [isLoading, setIsLoading] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [hasCompletedProfile, setHasCompletedProfile] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [hasWallet, setHasWallet] = useState(false);
-  const [socialAccounts, setSocialAccounts] = useState<SocialAccount[]>([]);
+  const [hasCompletedProfile, setHasCompletedProfile] = useState(false);
 
-  // Fetch user profile
-  const fetchProfile = async (userId: string) => {
+  const walletAddress = publicKey?.toBase58() ?? null;
+  const isAuthenticated = connected && !!walletAddress;
+
+  const fetchProfile = useCallback(async (wallet: string) => {
     try {
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (profileError && profileError.code !== 'PGRST116') {
-        console.error('Error fetching profile:', profileError);
-        return;
-      }
-
-      if (profileData) {
-        setProfile(profileData);
+      const res = await fetch(`/api/profiles/${wallet}`, {
+        cache: 'no-store',
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setProfile(data.profile);
         setHasCompletedProfile(true);
-        setHasWallet(!!profileData.wallet_public_key);
       } else {
+        setProfile(null);
         setHasCompletedProfile(false);
-        setHasWallet(false);
       }
     } catch (error) {
-      console.error('Error in fetchProfile:', error);
+      console.error('Error fetching profile:', error);
+      setProfile(null);
+      setHasCompletedProfile(false);
     }
-  };
-
-  // Fetch social accounts
-  const fetchSocialAccounts = async (userId: string) => {
-    try {
-      const { data: socialData, error: socialError } = await supabase
-        .from('social_accounts')
-        .select('*')
-        .eq('user_id', userId);
-
-      if (socialError) {
-        console.error('Error fetching social accounts:', socialError);
-        return;
-      }
-
-      setSocialAccounts(socialData || []);
-    } catch (error) {
-      console.error('Error in fetchSocialAccounts:', error);
-    }
-  };
-
-  // Initialize auth state
-  useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        // Check if supabase auth is available
-        if (!supabase?.auth) {
-          console.warn('Supabase auth not available');
-          setIsLoading(false);
-          return;
-        }
-
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error('Error getting session:', error);
-          setIsLoading(false);
-          return;
-        }
-
-        if (session) {
-          setUser(session.user);
-          setSession(session);
-          setIsAuthenticated(true);
-          
-          await fetchProfile(session.user.id);
-          await fetchSocialAccounts(session.user.id);
-        }
-      } catch (error) {
-        console.error('Error initializing auth:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    initializeAuth();
-
-    // Listen for auth changes
-    if (supabase?.auth) {
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(
-        async (event, session) => {
-          console.log('Auth state changed:', event, session?.user?.id);
-          
-          if (session) {
-            setUser(session.user);
-            setSession(session);
-            setIsAuthenticated(true);
-            
-            await fetchProfile(session.user.id);
-            await fetchSocialAccounts(session.user.id);
-          } else {
-            setUser(null);
-            setSession(null);
-            setIsAuthenticated(false);
-            setHasCompletedProfile(false);
-            setHasWallet(false);
-            setProfile(null);
-            setSocialAccounts([]);
-          }
-        }
-      );
-
-      return () => subscription.unsubscribe();
-    }
-
-    return () => {};
   }, []);
 
-  // Social login functions
-  const getOAuthRedirectUrl = () => {
-    const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-
-    if (configuredSiteUrl) {
-      return new URL('/auth/callback', configuredSiteUrl).toString();
-    }
-
-    if (typeof window !== 'undefined') {
-      return `${window.location.origin}/auth/callback`;
-    }
-
-    return undefined;
-  };
-
-  const signInWithGoogle = async () => {
-    try {
-      if (!supabase?.auth) {
-        return { error: { message: 'Supabase auth not available' } as AuthError };
+  useEffect(() => {
+    const check = async () => {
+      if (!walletAddress) {
+        setProfile(null);
+        setHasCompletedProfile(false);
+        setIsLoading(false);
+        return;
       }
 
-      const redirectTo = getOAuthRedirectUrl();
+      setIsLoading(true);
+      await fetchProfile(walletAddress);
+      setIsLoading(false);
+    };
 
-      if (!redirectTo) {
-        return { error: { message: 'OAuth redirect URL is not configured' } as AuthError };
-      }
-      
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo,
-        },
-      });
-      
-      return { error };
-    } catch (error) {
-      console.error('Error in signInWithGoogle:', error);
-      return { error: error as AuthError };
+    check();
+  }, [walletAddress, fetchProfile]);
+
+  const signOut = useCallback(() => {
+    disconnect();
+    setProfile(null);
+    setHasCompletedProfile(false);
+  }, [disconnect]);
+
+  const refreshProfile = useCallback(async () => {
+    if (walletAddress) {
+      await fetchProfile(walletAddress);
     }
-  };
-
-  const signInWithTwitter = async () => {
-    try {
-      if (!supabase?.auth) {
-        return { error: { message: 'Supabase auth not available' } as AuthError };
-      }
-
-      const redirectTo = getOAuthRedirectUrl();
-
-      if (!redirectTo) {
-        return { error: { message: 'OAuth redirect URL is not configured' } as AuthError };
-      }
-      
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'twitter',
-        options: {
-          redirectTo,
-        },
-      });
-      
-      return { error };
-    } catch (error) {
-      console.error('Error in signInWithTwitter:', error);
-      return { error: error as AuthError };
-    }
-  };
-
-  const signOut = async () => {
-    try {
-      if (!supabase?.auth) {
-        return { error: { message: 'Supabase auth not available' } as AuthError };
-      }
-      
-      const { error } = await supabase.auth.signOut();
-      return { error };
-    } catch (error) {
-      console.error('Error in signOut:', error);
-      return { error: error as AuthError };
-    }
-  };
-
-  const refreshProfile = async () => {
-    if (user) {
-      await fetchProfile(user.id);
-      await fetchSocialAccounts(user.id);
-    }
-  };
+  }, [walletAddress, fetchProfile]);
 
   const value: AuthContextType = {
     isAuthenticated,
     isLoading,
-    user,
-    session,
+    walletAddress,
     hasCompletedProfile,
     profile,
-    hasWallet,
-    socialAccounts,
-    signInWithGoogle,
-    signInWithTwitter,
     signOut,
     refreshProfile,
   };
