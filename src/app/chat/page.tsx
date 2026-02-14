@@ -201,7 +201,7 @@ function ChatPageInner() {
 
       <main className="main-content mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-4 px-2 pb-8 pt-20 sm:gap-6 sm:px-4 sm:pb-12 sm:pt-28 lg:px-8">
         <div className="flex flex-col gap-3 text-xs uppercase tracking-[0.2em] sm:tracking-[0.35em] text-[#555] sm:flex-row sm:items-center sm:justify-between">
-          <p>CHAT WITH YOUR SWIPES HERE</p>
+          <p>CHAT WITH YOUR MATCHES HERE</p>
         </div>
 
         <div className="flex flex-col gap-4 rounded-none border-2 sm:border-4 border-[#121212] bg-[#F4F4F0]/90 shadow-[6px_6px_0_#121212] sm:shadow-[12px_12px_0_#121212] overflow-hidden">
