@@ -9,7 +9,7 @@ import { ConnectWalletButton } from '@/components/ConnectWalletButton';
 import { ProxyWalletButton } from '@/components/ProxyWalletButton';
 
 type ActivePage = 'swipe' | 'chat' | null;
-type LogoType = 'pumpinder' | 'back';
+type LogoType = 'mypinder' | 'back';
 
 interface AppHeaderProps {
   activePage?: ActivePage;
@@ -24,7 +24,7 @@ interface AppHeaderProps {
 
 export function AppHeader({
   activePage = null,
-  logoType = 'pumpinder',
+  logoType = 'mypinder',
   showBalance = true,
   showProfile = true,
   showNav = true,
@@ -65,12 +65,12 @@ export function AppHeader({
     if (logoType === 'back') {
       return '← BACK';
     }
-    return 'PUMPINDER™';
+    return 'MYPINDER™';
   };
 
   return (
     <header className="swipe-header">
-      <button className="swipe-logo" aria-label={logoType === 'back' ? 'Go back' : 'PumpInder home'} onClick={handleLogoClick}>
+      <button className="swipe-logo" aria-label={logoType === 'back' ? 'Go back' : 'Mypinder home'} onClick={handleLogoClick}>
         {renderLogo()}
       </button>
       

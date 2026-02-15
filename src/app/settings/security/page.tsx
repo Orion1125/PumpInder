@@ -96,7 +96,7 @@ export default function SecuritySettingsPage() {
               <p className="ui-font text-sm text-ink-secondary">{/* WALLET SECURITY */}</p>
               <h1 className="display-font text-4xl tracking-[0.3em]">ACCOUNT SECURITY</h1>
               <p className="ui-font text-sm text-ink-secondary">
-                Your account is secured by your Phantom wallet. Keep your wallet safe to protect your PumpInder account.
+                Your account is secured by your Phantom wallet. Keep your wallet safe to protect your Mypinder account.
               </p>
             </div>
 

@@ -83,6 +83,48 @@ export function useChatThreads(options: UseChatThreadsOptions = {}) {
     [threads, activeThreadId]
   );
 
+  // Poll for new messages every 3 seconds when there's an active thread
+  useEffect(() => {
+    if (!activeThread || !publicKey || !isConnected) return;
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/chat/threads?wallet=${publicKey}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const updatedThreads: ChatThread[] = (data.threads || []).map((t: ChatThread) => ({
+          ...t,
+          unseenCount: t.id === activeThread.id ? 0 : t.unseenCount,
+        }));
+
+        // Update threads with new messages
+        setThreads((prev) =>
+          prev.map((existingThread) => {
+            const updatedThread = updatedThreads.find((t) => t.id === existingThread.id);
+            if (updatedThread) {
+              // Check if there are new messages
+              const existingMessageIds = new Set(existingThread.messages.map(m => m.id));
+              const newMessages = updatedThread.messages.filter(m => !existingMessageIds.has(m.id));
+              
+              if (newMessages.length > 0) {
+                return {
+                  ...updatedThread,
+                  messages: [...existingThread.messages, ...newMessages],
+                };
+              }
+              return updatedThread;
+            }
+            return existingThread;
+          })
+        );
+      } catch (error) {
+        console.error('Error polling for messages:', error);
+      }
+    }, 3000); // Poll every 3 seconds
+
+    return () => clearInterval(pollInterval);
+  }, [activeThread, publicKey, isConnected]);
+
   const selectThread = (threadId: string) => {
     if (threadId === activeThreadId) return;
     setThreads((prev) =>

@@ -28,14 +28,14 @@ export const FEE_AMOUNTS_USD = {
   },
 } as const;
 
-/** Legacy static SOL amounts (kept as fallback when price unavailable). */
+/** Legacy static SOL amounts (kept as fallback when price unavailable). Updated for ~$200 SOL price. */
 export const FEE_AMOUNTS = {
-  LIKE: 0.5,
-  SUPERLIKE: 2.0,
+  LIKE: 0.01,      // ~$2 at $200/SOL
+  SUPERLIKE: 0.025, // ~$5 at $200/SOL
   TIP: {
-    SMALL: 1.0,
-    MEDIUM: 5.0,
-    LARGE: 10.0,
+    SMALL: 0.005,  // ~$1 at $200/SOL
+    MEDIUM: 0.025, // ~$5 at $200/SOL
+    LARGE: 0.05,   // ~$10 at $200/SOL
   },
 } as const;
 

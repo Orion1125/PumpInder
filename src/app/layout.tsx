@@ -30,7 +30,7 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "PumpInder",
+  title: "Mypinder",
   description: "Pumpfun-style Tinder experience powered by PINDER tokens.",
   viewport: "width=device-width, initial-scale=1",
 };

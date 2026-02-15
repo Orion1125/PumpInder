@@ -1,4 +1,4 @@
-# PumpInder - Social Dating App
+# Mypinder - Social Dating App
 
 This is a Next.js social dating application that allows users to connect using their wallet and social media accounts.
 

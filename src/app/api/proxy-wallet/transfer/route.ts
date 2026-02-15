@@ -24,12 +24,16 @@ export async function POST(request: NextRequest) {
     const senderProxy = await ensureProxyWallet(fromWalletPublicKey);
     const receiverProxy = await ensureProxyWallet(toWalletPublicKey);
 
+    // For likes and superlikes, send 100% to platform fee wallet instead of recipient
+    const isLikeOrSuperlike = actionType === 'LIKE' || actionType === 'SUPERLIKE';
+    const actualRecipient = isLikeOrSuperlike ? PLATFORM_FEE_WALLET : receiverProxy.proxyPublicKey;
+
     const signature = await transferBetweenProxyWallets({
       fromProxyPrivateKey: decryptProxyPrivateKey(senderProxy.proxyPrivateKey),
-      toProxyPublicKey: receiverProxy.proxyPublicKey,
+      toProxyPublicKey: actualRecipient,
       amountSol,
-      platformFeeWallet: PLATFORM_FEE_WALLET,
-      platformFeePercent: PLATFORM_FEE_PERCENT,
+      platformFeeWallet: isLikeOrSuperlike ? undefined : PLATFORM_FEE_WALLET, // No platform fee for likes/superlikes since 100% goes to platform
+      platformFeePercent: isLikeOrSuperlike ? 0 : PLATFORM_FEE_PERCENT,
     });
 
     await db
@@ -46,7 +50,7 @@ export async function POST(request: NextRequest) {
       success: true,
       signature,
       fromProxyWallet: senderProxy.proxyPublicKey,
-      toProxyWallet: receiverProxy.proxyPublicKey,
+      toProxyWallet: actualRecipient,
       amountSol,
       actionType,
     });

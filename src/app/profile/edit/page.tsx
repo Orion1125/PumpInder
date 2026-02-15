@@ -54,7 +54,7 @@ const genderOptions = ['FEMALE', 'MALE', 'NON-BINARY', 'PREFER NOT TO SAY'] as c
 const pronounSuggestions = ['SHE / HER', 'HE / HIM', 'THEY / THEM', 'SHE / THEY', 'HE / THEY'];
 
 const socialHandleFields = [
-  { id: 'x', label: 'X / TWITTER', placeholder: '@pumpinder' },
+  { id: 'x', label: 'X / TWITTER', placeholder: '@mypinder' },
   { id: 'farcaster', label: 'FARCASTER', placeholder: 'farcaster://handle' },
   { id: 'lens', label: 'LENS', placeholder: 'lens.xyz/you' },
   { id: 'telegram', label: 'TELEGRAM', placeholder: '@handle' },

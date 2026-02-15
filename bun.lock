@@ -3,7 +3,7 @@
   "configVersion": 0,
   "workspaces": {
     "": {
-      "name": "pumpinder-next",
+      "name": "mypinder-next",
       "dependencies": {
         "@21st-extension/react": "^0.5.14",
         "@21st-extension/toolbar-next": "^0.5.14",

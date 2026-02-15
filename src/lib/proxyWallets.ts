@@ -6,7 +6,7 @@ import { db } from '@/lib/db';
 import { proxyWallets } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 
-const REVEAL_MESSAGE_PREFIX = 'PumpInder Proxy Wallet Reveal';
+const REVEAL_MESSAGE_PREFIX = 'Mypinder Proxy Wallet Reveal';
 const MAX_MESSAGE_AGE_MS = 5 * 60 * 1000;
 const ENCRYPTION_PREFIX = 'enc:v1:';
 

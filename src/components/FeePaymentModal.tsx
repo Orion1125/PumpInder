@@ -28,6 +28,7 @@ interface FeePaymentModalProps {
     error?: string;
     recipientWallet: string;
     amountPaid: number;
+    usdAmount?: number;
     actionType: string;
   } | null;
 }
@@ -93,10 +94,13 @@ export function FeePaymentModal({
                     Payment Successful!
                   </h3>
                   <p className="text-gray-600 mb-4">
-                    {lastPayment.amountPaid} SOL has been sent
+                    ${lastPayment.usdAmount} has been paid
                   </p>
                   <p className="text-xs text-gray-500 mb-4 break-all">
-                    To proxy wallet: {lastPayment.recipientWallet}
+                    {lastPayment.actionType === 'LIKE' || lastPayment.actionType === 'SUPERLIKE'
+                      ? 'To platform wallet'
+                      : `To proxy wallet: ${lastPayment.recipientWallet}`
+                    }
                   </p>
                   {lastPayment.signature && (
                     <div className="bg-gray-50 rounded-lg p-3 mb-4">
@@ -142,18 +146,22 @@ export function FeePaymentModal({
 
               <div className="bg-gray-50 rounded-lg p-4 mb-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-gray-600">Amount:</span>
+                  <span className="text-gray-600">Cost:</span>
                   <span className="font-semibold text-gray-900">
-                    {pendingFee.amount} SOL
-                    {pendingFee.usdAmount != null && (
-                      <span className="text-xs text-gray-500 ml-1">(~${pendingFee.usdAmount})</span>
+                    ${pendingFee.usdAmount}
+                    {pendingFee.amount > 0 && (
+                      <span className="text-xs text-gray-500 ml-1">({pendingFee.amount.toFixed(6)} SOL)</span>
                     )}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600">To (proxy):</span>
+                  <span className="text-gray-600">
+                    {pendingFee.type === 'LIKE' || pendingFee.type === 'SUPERLIKE' ? 'To (platform):' : 'To (proxy):'}
+                  </span>
                   <span className="font-mono text-xs text-gray-700 break-all">
-                    {pendingFee.recipientProxyWallet || pendingFee.recipientWallet}
+                    {pendingFee.type === 'LIKE' || pendingFee.type === 'SUPERLIKE' 
+                      ? 'Platform Fee Wallet' 
+                      : (pendingFee.recipientProxyWallet || pendingFee.recipientWallet)}
                   </span>
                 </div>
               </div>
@@ -223,7 +231,10 @@ export function FeePaymentModal({
               </div>
 
               <p className="text-xs text-gray-500 text-center mt-4">
-                This action transfers {paymentToken === 'SOL' ? 'SOL' : '$PINDER'} from your proxy wallet. 10% platform fee included.
+                {pendingFee.type === 'LIKE' || pendingFee.type === 'SUPERLIKE'
+                  ? 'Confirm payment action.'
+                  : `This action transfers ${paymentToken === 'SOL' ? 'SOL' : '$PINDER'} from your proxy wallet. 10% platform fee included.`
+                }
               </p>
             </div>
           ) : (

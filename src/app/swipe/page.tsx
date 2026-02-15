@@ -69,7 +69,7 @@ export default function SwipePage() {
   const [cardAnimation, setCardAnimation] = useState<CardAnimation>(null);
   const [isBoosting, setIsBoosting] = useState(false);
 
-  const { Modal, initiatePayment } = useFeePaymentModal();
+  const { Modal, initiatePayment, isLoading: isPaymentLoading } = useFeePaymentModal();
   const { isConnected, publicKey } = useWallet();
   const { profiles, isLoading, removeProfile, rotateProfileToBottom } = useProfiles();
   const { solPrice, usdToSol } = useSolPrice();
@@ -403,7 +403,7 @@ export default function SwipePage() {
                   <span className="cost-label">
                     {usdToSol(FEE_AMOUNTS_USD.SUPERLIKE) !== null
                       ? `-${usdToSol(FEE_AMOUNTS_USD.SUPERLIKE)!.toFixed(4)} SOL ($${FEE_AMOUNTS_USD.SUPERLIKE})`
-                      : '-2 SOL'}
+                      : `$${FEE_AMOUNTS_USD.SUPERLIKE}`}
                   </span>
                 </div>
                 <div className="control-button">
@@ -411,14 +411,15 @@ export default function SwipePage() {
                     type="button"
                     className="mech-button mech-button--signal"
                     onClick={handleLike}
+                    disabled={isPaymentLoading}
                   >
                     <Heart size={28} />
-                    LIKE
+                    {isPaymentLoading ? 'PAYING…' : 'LIKE'}
                   </button>
                   <span className="cost-label">
                     {usdToSol(FEE_AMOUNTS_USD.LIKE) !== null
                       ? `-${usdToSol(FEE_AMOUNTS_USD.LIKE)!.toFixed(4)} SOL ($${FEE_AMOUNTS_USD.LIKE})`
-                      : '-0.5 SOL'}
+                      : `$${FEE_AMOUNTS_USD.LIKE}`}
                   </span>
                 </div>
               </div>

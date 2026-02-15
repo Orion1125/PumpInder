@@ -24,6 +24,7 @@ export interface FeePaymentState {
     error?: string;
     recipientWallet: string;
     amountPaid: number;
+    usdAmount?: number;
     actionType: FeeType;
   } | null;
 }
@@ -83,6 +84,11 @@ export function useFeePayment() {
   };
 
   const initiatePayment = useCallback(async (feeType: FeeType, recipientWallet?: string, onSuccess?: () => void) => {
+    // Prevent multiple simultaneous payment initiations
+    if (state.isLoading || state.isModalOpen) {
+      return;
+    }
+
     // Store the callback so confirmPayment can invoke it
     if (onSuccess) {
       setOnSuccessCallback(() => onSuccess);
@@ -170,6 +176,7 @@ export function useFeePayment() {
           signature: data.signature,
           recipientWallet: data.toProxyWallet || pendingFee.recipientProxyWallet || pendingFee.recipientWallet,
           amountPaid: pendingFee.amount,
+          usdAmount: pendingFee.usdAmount,
           actionType: pendingFee.type,
         },
       }));

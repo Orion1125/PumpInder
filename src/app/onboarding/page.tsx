@@ -259,7 +259,7 @@ export default function OnboardingPage() {
                 <p className="ui-font text-xs text-red-700 text-center">{walletError}</p>
               )}
               <p className="ui-font text-xs text-ink-secondary text-center">
-                New to Phantom? A new wallet address will become your PumpInder account ID.
+                New to Phantom? A new wallet address will become your Mypinder account ID.
               </p>
             </div>
           </>
@@ -425,7 +425,7 @@ export default function OnboardingPage() {
           className="display-font text-2xl tracking-[0.2em] hover:opacity-80 transition-opacity duration-200"
           style={{ textTransform: 'uppercase' }}
         >
-          PUMPINDER™
+          MYPINDER™
         </button>
       </header>
 

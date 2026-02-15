@@ -68,7 +68,7 @@ export default function Home() {
           <div className="flex justify-between items-center">
             {/* Logo */}
             <div className="bg-white border-2 border-black px-4 py-2">
-              <span className="display-font text-black font-bold text-lg">PUMPINDER™</span>
+              <span className="display-font text-black font-bold text-lg">MYPINDER™</span>
             </div>
             
             {/* Navigation Links */}

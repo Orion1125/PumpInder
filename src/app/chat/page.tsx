@@ -63,7 +63,7 @@ function ChatPageInner() {
   });
 
   const { publicKey } = useWallet();
-  const { Modal, initiatePayment } = useFeePaymentModal();
+  const { Modal, initiatePayment, isLoading: isPaymentLoading } = useFeePaymentModal();
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -522,20 +522,20 @@ function ChatPageInner() {
                     <button
                       type="button"
                       onClick={() => setIsTipDropdownOpen(!isTipDropdownOpen)}
-                      disabled={!activeThread}
+                      disabled={!activeThread || isPaymentLoading}
                       className="flex items-center gap-1.5 sm:gap-2 border-[3px] border-[#121212] bg-[#5D5FEF] px-3 sm:px-4 py-2.5 sm:py-3 font-bold uppercase tracking-[0.1em] sm:tracking-[0.2em] text-white shadow-[3px_3px_0_#121212] sm:shadow-[4px_4px_0_#121212] transition hover:bg-[#4A4CD1] disabled:opacity-40 whitespace-nowrap min-h-[44px]"
                     >
                       <Coins className="h-4 w-4" />
                       TIP
                     </button>
                     <div className={`tip-dropdown ${isTipDropdownOpen ? 'open' : ''}`} role="menu" aria-label="Tip amount options" style={{ bottom: '100%', top: 'auto', marginBottom: '4px' }}>
-                      <button className="tip-dropdown-item" role="menuitem" onClick={() => handleTipSelect(1000)}>
+                      <button className="tip-dropdown-item" role="menuitem" onClick={() => handleTipSelect(1000)} disabled={isPaymentLoading}>
                         <TrendingDown className="h-4 w-4" /> 1,000 $PINDER
                       </button>
-                      <button className="tip-dropdown-item" role="menuitem" onClick={() => handleTipSelect(5000)}>
+                      <button className="tip-dropdown-item" role="menuitem" onClick={() => handleTipSelect(5000)} disabled={isPaymentLoading}>
                         <TrendingUp className="h-4 w-4" /> 5,000 $PINDER
                       </button>
-                      <button className="tip-dropdown-item" role="menuitem" onClick={() => handleTipSelect(10000)}>
+                      <button className="tip-dropdown-item" role="menuitem" onClick={() => handleTipSelect(10000)} disabled={isPaymentLoading}>
                         <Moon className="h-4 w-4" /> 10,000 $PINDER
                       </button>
                     </div>

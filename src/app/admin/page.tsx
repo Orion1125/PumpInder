@@ -12,7 +12,7 @@ const metrics = [
 export default function AdminPage() {
   return (
     <div className="min-h-screen text-(--ink-primary)">
-      <AppHeader logoType="pumpinder" showBalance={false} showProfile={false} showNav={false} />
+      <AppHeader logoType="mypinder" showBalance={false} showProfile={false} showNav={false} />
       
       <div className="mx-auto max-w-4xl space-y-10 px-6 py-16">
         <div>

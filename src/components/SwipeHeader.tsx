@@ -14,7 +14,7 @@ export function SwipeHeader({ activePage, balance }: SwipeHeaderProps) {
     <AppHeader
       activePage={activePage}
       balance={balance}
-      logoType="pumpinder"
+      logoType="mypinder"
       showBalance={true}
       showProfile={true}
       showNav={true}

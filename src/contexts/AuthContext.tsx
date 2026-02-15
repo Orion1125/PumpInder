@@ -35,9 +35,63 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [hasCompletedProfile, setHasCompletedProfile] = useState(false);
+  const [sessionExpiry, setSessionExpiry] = useState<number | null>(null);
 
   const walletAddress = publicKey?.toBase58() ?? null;
   const isAuthenticated = connected && !!walletAddress;
+
+  // Check for existing session on mount
+  useEffect(() => {
+    const savedSession = localStorage.getItem('mypinder_session');
+    if (savedSession) {
+      try {
+        const { walletAddress: savedWallet, expiry } = JSON.parse(savedSession);
+        const now = Date.now();
+        if (now < expiry && savedWallet) {
+          setSessionExpiry(expiry);
+          // If we have a saved session, we'll try to reconnect
+          console.log('Found valid session, expiry:', new Date(expiry));
+        } else {
+          localStorage.removeItem('mypinder_session');
+        }
+      } catch (error) {
+        localStorage.removeItem('mypinder_session');
+      }
+    }
+  }, []);
+
+  const saveSession = useCallback((wallet: string) => {
+    const expiry = Date.now() + (5 * 60 * 1000); // 5 minutes from now
+    setSessionExpiry(expiry);
+    localStorage.setItem('mypinder_session', JSON.stringify({
+      walletAddress: wallet,
+      expiry
+    }));
+  }, []);
+
+  const clearSession = useCallback(() => {
+    setSessionExpiry(null);
+    localStorage.removeItem('mypinder_session');
+  }, []);
+
+  // Check for session expiry every minute
+  useEffect(() => {
+    const checkSessionExpiry = () => {
+      if (sessionExpiry && Date.now() > sessionExpiry) {
+        console.log('Session expired, clearing...');
+        clearSession();
+        setProfile(null);
+        setHasCompletedProfile(false);
+        // Optionally disconnect wallet here if desired
+        // disconnect();
+      }
+    };
+
+    const interval = setInterval(checkSessionExpiry, 60000); // Check every minute
+    checkSessionExpiry(); // Check immediately
+
+    return () => clearInterval(interval);
+  }, [sessionExpiry, clearSession]);
 
   const fetchProfile = useCallback(async (wallet: string) => {
     try {
@@ -48,6 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const data = await res.json();
         setProfile(data.profile);
         setHasCompletedProfile(true);
+        saveSession(wallet); // Save session when profile is successfully loaded
       } else {
         setProfile(null);
         setHasCompletedProfile(false);
@@ -57,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProfile(null);
       setHasCompletedProfile(false);
     }
-  }, []);
+  }, [saveSession]);
 
   useEffect(() => {
     const check = async () => {
@@ -80,7 +135,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     disconnect();
     setProfile(null);
     setHasCompletedProfile(false);
-  }, [disconnect]);
+    clearSession();
+  }, [disconnect, clearSession]);
 
   const refreshProfile = useCallback(async () => {
     if (walletAddress) {
